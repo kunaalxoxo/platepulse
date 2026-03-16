@@ -12,11 +12,11 @@ const userSchema = new mongoose.Schema(
       enum: ['donor', 'retail', 'ngo', 'volunteer', 'consumer', 'waste_plant', 'admin'],
     },
     phone: { type: String },
-    avatar: { type: String }, // cloudinary URL
-    orgName: { type: String }, // for donor/retail/ngo/waste_plant
+    avatar: { type: String },
+    orgName: { type: String },
     location: {
       type: { type: String, default: 'Point' },
-      coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
+      coordinates: { type: [Number], default: [0, 0] },
       address: { type: String },
     },
     trustScore: { type: Number, default: 50, min: 0, max: 100 },
@@ -41,14 +41,12 @@ const userSchema = new mongoose.Schema(
 
 // Indexes
 userSchema.index({ location: '2dsphere' });
-
 userSchema.index({ role: 1 });
 
-// Hash password pre-save
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+// Hash password pre-save (Mongoose v7/v8 compatible — no next() needed with async)
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
-  next();
 });
 
 // Instance method: compare password
