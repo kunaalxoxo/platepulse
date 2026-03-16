@@ -21,11 +21,36 @@ const impactRoutes = require('./routes/impact.routes');
 const adminRoutes = require('./routes/admin.routes');
 const mapRoutes = require('./routes/map.routes');
 const qrRoutes = require('./routes/qr.routes');
+
 const app = express();
+
+// Allow multiple origins: localhost + production Vercel URL
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://platepulse-rho.vercel.app',
+  env.CLIENT_URL,
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Also allow any vercel.app subdomain for preview deployments
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+};
 
 // Security & parsing middleware
 app.use(helmet());
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -48,6 +73,7 @@ app.use('/api/v1/impact', impactRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/map', mapRoutes);
 app.use('/api/v1/qr', qrRoutes);
+
 // Health check
 app.get('/api/v1/health', (req, res) => {
   res.json({ success: true, message: 'PlatePulse API is running', data: { uptime: process.uptime() } });
