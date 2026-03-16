@@ -1,0 +1,41 @@
+module.exports = {
+  ROLES: {
+    DONOR: 'donor',
+    NGO: 'ngo',
+    RETAILER: 'retailer',
+    VOLUNTEER: 'volunteer',
+    CONSUMER: 'consumer',
+    WASTE_PLANT: 'waste_plant',
+    ADMIN: 'admin',
+  },
+  DONATION_STATUS: {
+    PENDING: 'pending',
+    APPROVED: 'approved',
+    PICKED_UP: 'picked_up',
+    DELIVERED: 'delivered',
+    EXPIRED: 'expired',
+    CANCELLED: 'cancelled',
+  },
+  ORDER_STATUS: {
+    PENDING: 'pending',
+    CONFIRMED: 'confirmed',
+    PROCESSING: 'processing',
+    SHIPPED: 'shipped',
+    DELIVERED: 'delivered',
+    CANCELLED: 'cancelled',
+  },
+  MISSION_STATUS: {
+    OPEN: 'open',
+    ASSIGNED: 'assigned',
+    IN_PROGRESS: 'in_progress',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+  },
+  NOTIFICATION_TYPES: {
+    DONATION: 'donation',
+    ORDER: 'order',
+    MISSION: 'mission',
+    SYSTEM: 'system',
+    ALERT: 'alert',
+  },
+};
