@@ -9,14 +9,21 @@ const VolunteerDashboard = () => {
   const [missions, setMissions] = useState([]);
   const [myMissions, setMyMissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [location, setLocation] = useState({ lat: null, lng: null });
+  const [locationReady, setLocationReady] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => console.log('Geo error', err),
+      (pos) => {
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationReady(true);
+      },
+      () => {
+        console.log('Geo denied on VolunteerDashboard');
+        setLocationReady(true); // unblock loading state
+      },
       { enableHighAccuracy: true }
     );
   }, []);
@@ -25,8 +32,10 @@ const VolunteerDashboard = () => {
     try {
       setLoading(true);
       if (activeTab === 'available') {
-        if (!location.lat) return;
-        // In this app, Volunteers also fetch donations for their available 'missions'
+        if (!location.lat) {
+          setMissions([]);
+          return;
+        }
         const res = await api.get(`/donations?status=available&lat=${location.lat}&lng=${location.lng}&radius=25`);
         setMissions(res.data.data);
       } else if (activeTab === 'my_missions') {
@@ -41,13 +50,18 @@ const VolunteerDashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab, location.lat]);
+    if (locationReady) fetchData();
+  }, [activeTab, locationReady]);
+
+  // Re-fetch when location updates after initial GPS resolves
+  useEffect(() => {
+    if (location.lat && activeTab === 'available') fetchData();
+  }, [location.lat]);
 
   const handleAccept = async (donationId) => {
     try {
       await api.post(`/missions/accept/${donationId}`);
-      alert('Mission Accepted!');
+      alert('Mission Accepted! 🚀');
       setActiveTab('my_missions');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to accept mission');
@@ -102,25 +116,29 @@ const VolunteerDashboard = () => {
 
         {!loading && activeTab === 'available' && (
           <div className="space-y-4">
-            {missions.length === 0 ? (
-              <p className="text-center text-text/50 py-10">No missions available nearby.</p>
-            ) : (
-              missions.map(m => (
-                <div key={m._id} className="border border-gray-100 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center hover:shadow-md transition">
-                  <div className="flex-1 w-full flex justify-between">
-                    <div>
-                      <h3 className="font-bold text-lg">{m.name}</h3>
-                      <p className="text-sm text-text/60">{m.pickupLocation.address}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="block text-primary font-bold text-sm bg-green-50 px-2 py-1 rounded-md mb-1">📍 {m.distance?.toFixed(1) || 0}km</span>
-                      <span className="block text-xs font-bold text-yellow-600">🏆 50 pts</span>
-                    </div>
-                  </div>
-                  <button onClick={() => handleAccept(m._id)} className="w-full md:w-auto px-6 py-2 bg-primary text-white font-bold rounded-xl hover:bg-green-700">Accept</button>
-                </div>
-              ))
+            {!location.lat && (
+              <p className="p-4 bg-yellow-50 text-yellow-800 rounded-xl font-medium">
+                📍 Location access denied — enable GPS to see missions near you.
+              </p>
             )}
+            {location.lat && missions.length === 0 && (
+              <p className="text-center text-text/50 py-10">No missions available nearby right now.</p>
+            )}
+            {missions.map(m => (
+              <div key={m._id} className="border border-gray-100 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center hover:shadow-md transition">
+                <div className="flex-1 w-full flex justify-between">
+                  <div>
+                    <h3 className="font-bold text-lg">{m.name}</h3>
+                    <p className="text-sm text-text/60">{m.pickupLocation.address}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="block text-primary font-bold text-sm bg-green-50 px-2 py-1 rounded-md mb-1">📍 {m.distance?.toFixed(1) || 0}km</span>
+                    <span className="block text-xs font-bold text-yellow-600">🏆 50 pts</span>
+                  </div>
+                </div>
+                <button onClick={() => handleAccept(m._id)} className="w-full md:w-auto px-6 py-2 bg-primary text-white font-bold rounded-xl hover:bg-green-700">Accept</button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -150,11 +168,9 @@ const VolunteerDashboard = () => {
             <span className="text-6xl mb-4">{badgeObj.icon}</span>
             <h2 className="text-2xl font-bold">{badgeObj.label} Status</h2>
             <p className="text-4xl font-heading font-black text-primary my-6">{user?.points || 0} Points</p>
-            
             <div className="w-full max-w-sm mt-4">
               <div className="flex justify-between text-xs font-bold text-text/60 mb-1">
-                <span>Progress</span>
-                <span>{prog.next}</span>
+                <span>Progress</span><span>{prog.next}</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${prog.pct}%` }}></div>

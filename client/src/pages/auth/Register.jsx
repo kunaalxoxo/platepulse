@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import api from '../../services/api';
 
 const ROLES = [
   { key: 'donor', icon: '🍽️', label: 'Donor', desc: 'Restaurants, hotels, event organizers' },
@@ -14,15 +15,9 @@ const ROLES = [
 
 const ORG_ROLES = ['donor', 'retail', 'ngo', 'waste_plant'];
 
-// All roles redirect to /dashboard — the router renders the right component based on role
 const ROLE_REDIRECTS = {
-  donor: '/dashboard',
-  ngo: '/dashboard',
-  retail: '/dashboard',
-  volunteer: '/dashboard',
-  consumer: '/marketplace',
-  waste_plant: '/dashboard',
-  admin: '/dashboard',
+  donor: '/dashboard', ngo: '/dashboard', retail: '/dashboard',
+  volunteer: '/dashboard', consumer: '/marketplace', waste_plant: '/dashboard', admin: '/dashboard',
 };
 
 const STEPS = ['Role', 'Info', 'Location', 'Verify'];
@@ -100,18 +95,17 @@ const Register = () => {
   };
 
   const handleOtpKeyDown = (idx, e) => {
-    if (e.key === 'Backspace' && !otp[idx] && idx > 0) {
-      otpRefs.current[idx - 1]?.focus();
-    }
+    if (e.key === 'Backspace' && !otp[idx] && idx > 0) otpRefs.current[idx - 1]?.focus();
   };
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newOtp = [...otp];
+    const newOtp = ['', '', '', '', '', ''];
     for (let i = 0; i < pasted.length; i++) newOtp[i] = pasted[i];
     setOtp(newOtp);
-    if (pasted.length > 0) otpRefs.current[Math.min(pasted.length, 5)]?.focus();
+    const focusIdx = Math.min(pasted.length, 5);
+    otpRefs.current[focusIdx]?.focus();
   };
 
   const handleVerify = async () => {
@@ -127,17 +121,15 @@ const Register = () => {
     } finally { setLoading(false); }
   };
 
+  // Use dedicated resend endpoint instead of re-calling register (which creates a duplicate user)
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     setLoading(true); setError('');
     try {
-      await register({
-        name: form.name, email: form.email, password: form.password,
-        role: form.role, phone: form.phone,
-        ...(ORG_ROLES.includes(form.role) && { orgName: form.orgName }),
-      });
+      await api.post('/auth/resend-otp', { email: form.email });
       setResendCooldown(30);
       setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
     } catch (err) {
       setError(err.response?.data?.message || 'Could not resend OTP');
     } finally { setLoading(false); }
@@ -146,10 +138,7 @@ const Register = () => {
   const handleUseLocation = () => {
     if (!navigator.geolocation) { setError('Geolocation not supported'); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setForm((p) => ({ ...p, lat: pos.coords.latitude, lng: pos.coords.longitude }));
-        setError('');
-      },
+      (pos) => { setForm((p) => ({ ...p, lat: pos.coords.latitude, lng: pos.coords.longitude })); setError(''); },
       () => setError('Could not get your location'),
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -166,9 +155,7 @@ const Register = () => {
         <div className="flex items-center justify-center gap-2 mb-6">
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                i <= step ? 'bg-primary text-white' : 'bg-gray-200 text-text/40'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${i <= step ? 'bg-primary text-white' : 'bg-gray-200 text-text/40'}`}>
                 {i < step ? '✓' : i + 1}
               </div>
               <span className={`text-xs font-medium hidden sm:block ${i <= step ? 'text-primary' : 'text-text/40'}`}>{s}</span>
@@ -178,9 +165,7 @@ const Register = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>
-          )}
+          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>}
 
           {step === 0 && (
             <div>
@@ -188,9 +173,7 @@ const Register = () => {
               <div className="grid grid-cols-2 gap-3">
                 {ROLES.map((r) => (
                   <button key={r.key} type="button" onClick={() => updateForm('role', r.key)}
-                    className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
-                      form.role === r.key ? 'border-primary bg-green-50 shadow-md' : 'border-gray-200 hover:border-gray-300'
-                    }`}>
+                    className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${form.role === r.key ? 'border-primary bg-green-50 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
                     <span className="text-2xl">{r.icon}</span>
                     <p className="font-semibold text-sm mt-2 text-text">{r.label}</p>
                     <p className="text-xs text-text/50 mt-0.5 leading-tight">{r.desc}</p>
@@ -203,31 +186,11 @@ const Register = () => {
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-xl font-heading font-bold text-text mb-2">Basic Information</h2>
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Full Name</label>
-                <input type="text" required value={form.name} onChange={(e) => updateForm('name', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="John Doe" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Email</label>
-                <input type="email" required value={form.email} onChange={(e) => updateForm('email', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="you@example.com" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Password</label>
-                <input type="password" required minLength={8} value={form.password} onChange={(e) => updateForm('password', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Min 8 characters" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Confirm Password</label>
-                <input type="password" required value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Repeat password" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Phone Number</label>
-                <input type="tel" value={form.phone} onChange={(e) => updateForm('phone', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="+91 98765 43210" />
-              </div>
+              <div><label className="block text-sm font-medium text-text mb-1">Full Name</label><input type="text" required value={form.name} onChange={(e) => updateForm('name', e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="John Doe" /></div>
+              <div><label className="block text-sm font-medium text-text mb-1">Email</label><input type="email" required value={form.email} onChange={(e) => updateForm('email', e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="you@example.com" /></div>
+              <div><label className="block text-sm font-medium text-text mb-1">Password</label><input type="password" required minLength={8} value={form.password} onChange={(e) => updateForm('password', e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Min 8 characters" /></div>
+              <div><label className="block text-sm font-medium text-text mb-1">Confirm Password</label><input type="password" required value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Repeat password" /></div>
+              <div><label className="block text-sm font-medium text-text mb-1">Phone Number</label><input type="tel" value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="+91 98765 43210" /></div>
             </div>
           )}
 
@@ -235,35 +198,20 @@ const Register = () => {
             <div className="space-y-4">
               <h2 className="text-xl font-heading font-bold text-text mb-2">Location & Details</h2>
               {ORG_ROLES.includes(form.role) && (
-                <div>
-                  <label className="block text-sm font-medium text-text mb-1">Organization Name</label>
-                  <input type="text" required value={form.orgName} onChange={(e) => updateForm('orgName', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Your org name" />
-                </div>
+                <div><label className="block text-sm font-medium text-text mb-1">Organization Name</label><input type="text" required value={form.orgName} onChange={(e) => updateForm('orgName', e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Your org name" /></div>
               )}
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Address</label>
-                <input type="text" value={form.address} onChange={(e) => updateForm('address', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Street, City, State" />
-              </div>
-              <button type="button" onClick={handleUseLocation}
-                className="w-full py-3 border-2 border-dashed border-primary/40 text-primary font-medium rounded-xl hover:bg-green-50 transition flex items-center justify-center gap-2">
+              <div><label className="block text-sm font-medium text-text mb-1">Address</label><input type="text" value={form.address} onChange={(e) => updateForm('address', e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" placeholder="Street, City, State" /></div>
+              <button type="button" onClick={handleUseLocation} className="w-full py-3 border-2 border-dashed border-primary/40 text-primary font-medium rounded-xl hover:bg-green-50 transition flex items-center justify-center gap-2">
                 📍 Use my current location
               </button>
-              {form.lat !== 0 && (
-                <p className="text-xs text-secondary font-medium text-center">
-                  ✅ Location captured: {form.lat.toFixed(4)}, {form.lng.toFixed(4)}
-                </p>
-              )}
+              {form.lat !== 0 && <p className="text-xs text-secondary font-medium text-center">✅ Location captured: {form.lat.toFixed(4)}, {form.lng.toFixed(4)}</p>}
             </div>
           )}
 
           {step === 3 && (
             <div className="text-center">
               <h2 className="text-xl font-heading font-bold text-text mb-2">Verify Your Email</h2>
-              <p className="text-sm text-text/60 mb-6">
-                We sent a 6-digit code to <strong className="text-primary">{form.email}</strong>
-              </p>
+              <p className="text-sm text-text/60 mb-6">We sent a 6-digit code to <strong className="text-primary">{form.email}</strong></p>
               <div className="flex justify-center gap-3 mb-6" onPaste={handleOtpPaste}>
                 {otp.map((digit, idx) => (
                   <input key={idx} ref={(el) => (otpRefs.current[idx] = el)}
@@ -273,8 +221,7 @@ const Register = () => {
                     className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" />
                 ))}
               </div>
-              <button onClick={handleVerify} disabled={loading}
-                className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-green-700 transition disabled:opacity-60">
+              <button onClick={handleVerify} disabled={loading} className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-green-700 transition disabled:opacity-60">
                 {loading ? 'Verifying...' : 'Verify & Continue'}
               </button>
               <p className="mt-4 text-sm text-text/50">
@@ -293,8 +240,7 @@ const Register = () => {
               {step > 0 ? (
                 <button onClick={() => setStep(step - 1)} className="px-6 py-2.5 text-text/60 font-medium hover:text-text transition">← Back</button>
               ) : <div />}
-              <button onClick={handleNext} disabled={loading}
-                className="px-8 py-2.5 bg-primary text-white font-semibold rounded-xl hover:bg-green-700 transition disabled:opacity-60">
+              <button onClick={handleNext} disabled={loading} className="px-8 py-2.5 bg-primary text-white font-semibold rounded-xl hover:bg-green-700 transition disabled:opacity-60">
                 {loading ? 'Please wait...' : step === 2 ? 'Create Account' : 'Next →'}
               </button>
             </div>
