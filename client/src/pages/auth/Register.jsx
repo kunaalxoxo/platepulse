@@ -14,9 +14,15 @@ const ROLES = [
 
 const ORG_ROLES = ['donor', 'retail', 'ngo', 'waste_plant'];
 
+// All roles redirect to /dashboard — the router renders the right component based on role
 const ROLE_REDIRECTS = {
-  donor: '/donor', ngo: '/ngo', retail: '/retail', volunteer: '/volunteer',
-  consumer: '/marketplace', waste_plant: '/waste-plant', admin: '/admin',
+  donor: '/dashboard',
+  ngo: '/dashboard',
+  retail: '/dashboard',
+  volunteer: '/dashboard',
+  consumer: '/marketplace',
+  waste_plant: '/dashboard',
+  admin: '/dashboard',
 };
 
 const STEPS = ['Role', 'Info', 'Location', 'Verify'];
@@ -37,7 +43,6 @@ const Register = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef([]);
 
-  // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
       const t = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
@@ -47,7 +52,6 @@ const Register = () => {
 
   const updateForm = (key, val) => { setForm((p) => ({ ...p, [key]: val })); setError(''); };
 
-  // ── Step validators ────────────────────────────
   const validateStep = () => {
     switch (step) {
       case 0: if (!form.role) { setError('Please select a role'); return false; } break;
@@ -64,7 +68,6 @@ const Register = () => {
     return true;
   };
 
-  // ── Step 2 → Step 3: Submit registration ────────
   const handleRegister = async () => {
     setLoading(true); setError('');
     try {
@@ -88,7 +91,6 @@ const Register = () => {
     setStep(step + 1);
   };
 
-  // ── OTP input handling ──────────────────────────
   const handleOtpChange = (idx, val) => {
     if (!/^\d*$/.test(val)) return;
     const newOtp = [...otp];
@@ -112,7 +114,6 @@ const Register = () => {
     if (pasted.length > 0) otpRefs.current[Math.min(pasted.length, 5)]?.focus();
   };
 
-  // ── Verify OTP ──────────────────────────────────
   const handleVerify = async () => {
     const code = otp.join('');
     if (code.length !== 6) { setError('Please enter the full 6-digit code'); return; }
@@ -120,13 +121,12 @@ const Register = () => {
     try {
       const data = await verifyEmail(form.email, code);
       const role = data.data.user.role;
-      navigate(ROLE_REDIRECTS[role] || '/');
+      navigate(ROLE_REDIRECTS[role] || '/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed');
     } finally { setLoading(false); }
   };
 
-  // ── Resend OTP ──────────────────────────────────
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     setLoading(true); setError('');
@@ -143,7 +143,6 @@ const Register = () => {
     } finally { setLoading(false); }
   };
 
-  // ── Use my location ────────────────────────────
   const handleUseLocation = () => {
     if (!navigator.geolocation) { setError('Geolocation not supported'); return; }
     navigator.geolocation.getCurrentPosition(
@@ -159,13 +158,11 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface px-4 py-8">
       <div className="w-full max-w-lg">
-        {/* Logo */}
         <div className="text-center mb-6">
           <h1 className="text-4xl font-heading font-bold text-primary">🌿 PlatePulse</h1>
           <p className="text-text/60 mt-1">Create your account</p>
         </div>
 
-        {/* Progress bar */}
         <div className="flex items-center justify-center gap-2 mb-6">
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
@@ -180,28 +177,20 @@ const Register = () => {
           ))}
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>
           )}
 
-          {/* ── Step 0: Role Selector ──────────── */}
           {step === 0 && (
             <div>
               <h2 className="text-xl font-heading font-bold text-text mb-4">Choose your role</h2>
               <div className="grid grid-cols-2 gap-3">
                 {ROLES.map((r) => (
-                  <button
-                    key={r.key}
-                    type="button"
-                    onClick={() => updateForm('role', r.key)}
+                  <button key={r.key} type="button" onClick={() => updateForm('role', r.key)}
                     className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
-                      form.role === r.key
-                        ? 'border-primary bg-green-50 shadow-md'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
+                      form.role === r.key ? 'border-primary bg-green-50 shadow-md' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
                     <span className="text-2xl">{r.icon}</span>
                     <p className="font-semibold text-sm mt-2 text-text">{r.label}</p>
                     <p className="text-xs text-text/50 mt-0.5 leading-tight">{r.desc}</p>
@@ -211,7 +200,6 @@ const Register = () => {
             </div>
           )}
 
-          {/* ── Step 1: Basic Info ─────────────── */}
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-xl font-heading font-bold text-text mb-2">Basic Information</h2>
@@ -243,7 +231,6 @@ const Register = () => {
             </div>
           )}
 
-          {/* ── Step 2: Location & Org ─────────── */}
           {step === 2 && (
             <div className="space-y-4">
               <h2 className="text-xl font-heading font-bold text-text mb-2">Location & Details</h2>
@@ -271,7 +258,6 @@ const Register = () => {
             </div>
           )}
 
-          {/* ── Step 3: OTP Verification ──────── */}
           {step === 3 && (
             <div className="text-center">
               <h2 className="text-xl font-heading font-bold text-text mb-2">Verify Your Email</h2>
@@ -280,17 +266,11 @@ const Register = () => {
               </p>
               <div className="flex justify-center gap-3 mb-6" onPaste={handleOtpPaste}>
                 {otp.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => (otpRefs.current[idx] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
+                  <input key={idx} ref={(el) => (otpRefs.current[idx] = el)}
+                    type="text" inputMode="numeric" maxLength={1} value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition"
-                  />
+                    className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition" />
                 ))}
               </div>
               <button onClick={handleVerify} disabled={loading}
@@ -308,13 +288,10 @@ const Register = () => {
             </div>
           )}
 
-          {/* ── Navigation buttons ────────────── */}
           {step < 3 && (
             <div className="flex items-center justify-between mt-6">
               {step > 0 ? (
-                <button onClick={() => setStep(step - 1)} className="px-6 py-2.5 text-text/60 font-medium hover:text-text transition">
-                  ← Back
-                </button>
+                <button onClick={() => setStep(step - 1)} className="px-6 py-2.5 text-text/60 font-medium hover:text-text transition">← Back</button>
               ) : <div />}
               <button onClick={handleNext} disabled={loading}
                 className="px-8 py-2.5 bg-primary text-white font-semibold rounded-xl hover:bg-green-700 transition disabled:opacity-60">
@@ -323,7 +300,6 @@ const Register = () => {
             </div>
           )}
 
-          {/* Login link */}
           {step === 0 && (
             <p className="mt-6 text-center text-sm text-text/60">
               Already have an account?{' '}
