@@ -2,21 +2,20 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
 const WastePlantDashboard = () => {
-  const [activeTab, setActiveTab] = useState('incoming'); // incoming, completed, impact
+  const [activeTab, setActiveTab] = useState('incoming');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal State
   const [selectedReq, setSelectedReq] = useState(null);
   const [form, setForm] = useState({ compostKg: '', biogasLiters: '', feedKg: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchRequests = async () => {
+  // Accept explicit status param to avoid stale activeTab closure
+  const fetchRequests = async (statusOverride) => {
     try {
       setLoading(true);
-      // We rely on backend filtering to grab pending vs completed
-      const statusParam = activeTab === 'completed' ? 'completed' : 'pending';
-      const res = await api.get(`/waste/my-requests?status=${statusParam}`);
+      const status = statusOverride ?? (activeTab === 'completed' || activeTab === 'impact' ? 'completed' : 'pending');
+      const res = await api.get(`/waste/my-requests?status=${status}`);
       setRequests(res.data.data);
     } catch (err) {
       console.error(err);
@@ -26,9 +25,8 @@ const WastePlantDashboard = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 'incoming' || activeTab === 'completed') {
-      fetchRequests();
-    }
+    if (activeTab === 'incoming') fetchRequests('pending');
+    if (activeTab === 'completed' || activeTab === 'impact') fetchRequests('completed');
   }, [activeTab]);
 
   const handleSubmitReport = async (e) => {
@@ -39,7 +37,7 @@ const WastePlantDashboard = () => {
       alert('✅ Impact logged successfully!');
       setSelectedReq(null);
       setForm({ compostKg: '', biogasLiters: '', feedKg: '' });
-      fetchRequests(); // Refresh the active list
+      fetchRequests('pending');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit report');
     } finally {
@@ -47,17 +45,14 @@ const WastePlantDashboard = () => {
     }
   };
 
-  const getImpactTotals = () => {
-    // If we wanted to, we could hit a dedicated stats endpoint for the user, 
-    // but in this mockup we'll sum over the local 'completed' fetch if we had all data.
-    // For simplicity, we just aggregate the currently loaded array since normally this would 
-    // be paginated and backed by a server route.
-    return {
-      compost: requests.reduce((sum, r) => sum + (r.compostKg || 0), 0),
-      biogas: requests.reduce((sum, r) => sum + (r.biogasLiters || 0), 0),
-      feed: requests.reduce((sum, r) => sum + (r.feedKg || 0), 0)
-    };
-  };
+  const getImpactTotals = () => ({
+    compost: requests.reduce((sum, r) => sum + (r.compostKg || 0), 0),
+    biogas: requests.reduce((sum, r) => sum + (r.biogasLiters || 0), 0),
+    feed: requests.reduce((sum, r) => sum + (r.feedKg || 0), 0)
+  });
+
+  // Validate: check trimmed string, not truthiness — "0" is falsy but valid
+  const hasAnyValue = [form.compostKg, form.biogasLiters, form.feedKg].some(v => String(v).trim() !== '');
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -67,7 +62,7 @@ const WastePlantDashboard = () => {
       <div className="flex gap-2 mb-8 border-b border-gray-100 pb-4">
         <button onClick={() => setActiveTab('incoming')} className={`px-6 py-2 rounded-xl font-medium transition ${activeTab === 'incoming' ? 'bg-primary text-white' : 'hover:bg-gray-50'}`}>Incoming Pickups</button>
         <button onClick={() => setActiveTab('completed')} className={`px-6 py-2 rounded-xl font-medium transition ${activeTab === 'completed' ? 'bg-primary text-white' : 'hover:bg-gray-50'}`}>Completed</button>
-        <button onClick={() => { setActiveTab('impact'); fetchRequests(); /* trigger load of completed data for stats */ }} className={`px-6 py-2 rounded-xl font-medium transition ${activeTab === 'impact' ? 'bg-primary text-white' : 'hover:bg-gray-50'}`}>Impact Stats</button>
+        <button onClick={() => setActiveTab('impact')} className={`px-6 py-2 rounded-xl font-medium transition ${activeTab === 'impact' ? 'bg-primary text-white' : 'hover:bg-gray-50'}`}>Impact Stats</button>
       </div>
 
       {loading ? (
@@ -129,7 +124,6 @@ const WastePlantDashboard = () => {
         </div>
       )}
 
-      {/* ── Submission Modal ── */}
       {selectedReq && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-slide-up">
@@ -154,7 +148,7 @@ const WastePlantDashboard = () => {
                  <input type="number" step="0.1" min="0" value={form.feedKg} onChange={e=>setForm({...form, feedKg: e.target.value})} className="w-full border px-4 py-2 rounded-xl focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500" placeholder="e.g. 2.0" />
               </div>
               
-              <button type="submit" disabled={submitting || (!form.compostKg && !form.biogasLiters && !form.feedKg)} className="w-full py-3 bg-primary text-white font-bold rounded-xl mt-4 hover:bg-green-700 disabled:opacity-50">
+              <button type="submit" disabled={submitting || !hasAnyValue} className="w-full py-3 bg-primary text-white font-bold rounded-xl mt-4 hover:bg-green-700 disabled:opacity-50">
                 {submitting ? 'Authenticating...' : 'Sign & Submit Report'}
               </button>
             </form>

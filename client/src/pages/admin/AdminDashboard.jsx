@@ -7,25 +7,23 @@ const COLORS = ['#2E7D32', '#4CAF50', '#8BC34A', '#CDDC39', '#FFC107', '#FF9800'
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   
-  // States
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState({ data: [], page: 1, hasNext: false });
   const [donations, setDonations] = useState({ data: [], page: 1, hasNext: false });
   
-  // Filters
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
   useEffect(() => {
     if (activeTab === 'overview' || activeTab === 'analytics') fetchStats();
-    if (activeTab === 'users') fetchUsers(1, true);
+    if (activeTab === 'users') fetchUsers(1, true, search);
     if (activeTab === 'donations') fetchDonations(1, true);
-  }, [activeTab, roleFilter]); // refetch users on role filter change
+  }, [activeTab, roleFilter]);
 
   useEffect(() => {
-    // Debounced search
     if (activeTab === 'users') {
-      const timer = setTimeout(() => fetchUsers(1, true), 400);
+      // Pass current search value directly to avoid stale closure
+      const timer = setTimeout(() => fetchUsers(1, true, search), 400);
       return () => clearTimeout(timer);
     }
   }, [search]);
@@ -39,9 +37,10 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchUsers = async (page = 1, reset = false) => {
+  // searchTerm param avoids stale closure when called from debounce
+  const fetchUsers = async (page = 1, reset = false, searchTerm = search) => {
     try {
-      const res = await api.get(`/admin/users?page=${page}&limit=20&search=${search}&role=${roleFilter}`);
+      const res = await api.get(`/admin/users?page=${page}&limit=20&search=${searchTerm}&role=${roleFilter}`);
       setUsers(prev => ({
         data: reset ? res.data.data : [...prev.data, ...res.data.data],
         page: res.data.pagination.page,
@@ -56,7 +55,7 @@ const AdminDashboard = () => {
     try {
       const res = await api.get(`/admin/donations?page=${page}&limit=20`);
       setDonations(prev => ({
-        data: reset ? res.data.data : [...prev.data, ...res.data.data], // Simplified pagination assumption for brevity
+        data: reset ? res.data.data : [...prev.data, ...res.data.data],
         page,
         hasNext: res.data.data.length === 20
       }));
@@ -100,7 +99,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex overflow-x-auto border-b border-gray-100 mb-8 scrollbar-hide">
         <TabButton id="overview" label="Overview" />
         <TabButton id="users" label="Users & Access" />
@@ -108,7 +106,6 @@ const AdminDashboard = () => {
         <TabButton id="analytics" label="System Analytics" />
       </div>
 
-      {/* Overview Tab */}
       {activeTab === 'overview' && stats && (
         <div className="space-y-8 animate-fade-in">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -152,7 +149,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Users Tab */}
       {activeTab === 'users' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -208,7 +204,6 @@ const AdminDashboard = () => {
             </table>
           </div>
 
-          {/* Mobile Card List */}
           <div className="sm:hidden space-y-4">
             {users.data.map(u => (
               <div key={u._id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -228,11 +223,10 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {users.hasNext && <button onClick={()=>fetchUsers(users.page + 1)} className="w-full py-3 text-sm font-bold text-gray-500 hover:text-black hover:bg-gray-50 rounded-xl transition">Load More Users</button>}
+          {users.hasNext && <button onClick={()=>fetchUsers(users.page + 1, false, search)} className="w-full py-3 text-sm font-bold text-gray-500 hover:text-black hover:bg-gray-50 rounded-xl transition">Load More Users</button>}
         </div>
       )}
 
-      {/* Analytics Tab (Stubbed Area) */}
       {activeTab === 'analytics' && stats && (
          <div className="space-y-6 animate-fade-in">
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -249,7 +243,6 @@ const AdminDashboard = () => {
          </div>
       )}
 
-      {/* Donations Tab */}
       {activeTab === 'donations' && (
         <div className="space-y-6 animate-fade-in">
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-x-auto">

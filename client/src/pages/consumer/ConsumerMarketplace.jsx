@@ -7,7 +7,7 @@ import useSocket from '../../hooks/useSocket';
 
 const ConsumerMarketplace = () => {
   const { user } = useAuthStore();
-  const socket = useSocket(null); // Anonymous map
+  const socket = useSocket(null);
   const { items, addItem, removeItem, updateQty, clearCart, getCartTotal } = useCartStore();
 
   const [products, setProducts] = useState([]);
@@ -17,7 +17,6 @@ const ConsumerMarketplace = () => {
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  // Geolocation scope for geospatial fetching
   const [location, setLocation] = useState({ lat: null, lng: null });
 
   useEffect(() => {
@@ -37,7 +36,7 @@ const ConsumerMarketplace = () => {
       if (location.lat) {
         params.append('lat', location.lat);
         params.append('lng', location.lng);
-        params.append('radius', 50); // 50km
+        params.append('radius', 50);
       }
 
       const res = await api.get(`/products?${params.toString()}`);
@@ -53,7 +52,6 @@ const ConsumerMarketplace = () => {
     fetchProducts();
   }, [category, urgentOnly, location.lat]);
 
-  // Real-time dynamic pricing injection
   useEffect(() => {
     if (!socket) return;
     
@@ -70,8 +68,9 @@ const ConsumerMarketplace = () => {
     return () => socket.off('price_updated', handlePriceUpdate);
   }, [socket]);
 
-  // Load Razorpay Head Script
+  // Guard against duplicate script injection on remount / React strict mode double-invoke
   useEffect(() => {
+    if (document.querySelector('script[src*="razorpay"]')) return;
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
@@ -85,21 +84,18 @@ const ConsumerMarketplace = () => {
     }
     
     try {
-      // 1. Create intent
       const payload = { items: items.map(i => ({ productId: i._id, quantity: i.quantity })) };
       const { data } = await api.post('/orders/create-order', payload);
       const { orderId, razorpayOrderId, amount, key, currency } = data.data;
 
-      // 2. Open Gateway
       const options = {
-        key: key === 'mock_key' ? null : key, // Handle missing real keys gracefully for dev
+        key: key === 'mock_key' ? null : key,
         amount,
         currency,
         name: 'PlatePulse Marketplace',
         description: 'Near-expiry food purchase',
         order_id: razorpayOrderId,
         handler: async (response) => {
-          // 3. Verify Payment
           try {
             await api.post('/orders/verify-payment', {
               orderId,
@@ -110,7 +106,7 @@ const ConsumerMarketplace = () => {
             clearCart();
             setIsCartOpen(false);
             alert('🎉 Checkout successful! You are helping heal the planet.');
-            fetchProducts(); // Refresh stock
+            fetchProducts();
           } catch (verifyErr) {
             alert(verifyErr.response?.data?.message || 'Payment verification failed');
           }
@@ -120,7 +116,6 @@ const ConsumerMarketplace = () => {
       };
 
       if (key === 'mock_key') {
-        // Trigger mock pathway if no Razorpay env
         alert('DEV MODE: Simulating Razorpay successful checkout...');
         options.handler({ razorpay_order_id: razorpayOrderId, razorpay_payment_id: 'rzp_mock', razorpay_signature: 'mock' });
       } else {
@@ -135,7 +130,6 @@ const ConsumerMarketplace = () => {
 
   return (
     <div className="relative min-h-screen bg-surface">
-      {/* ── Header Bar ── */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -154,7 +148,6 @@ const ConsumerMarketplace = () => {
           </div>
         </div>
         
-        {/* Category Tabs */}
         <div className="max-w-7xl mx-auto px-4 pb-2 flex gap-6 overflow-x-auto hide-scrollbar">
           {[{v:'',l:'All'},{v:'packaged',l:'Packaged'},{v:'bakery',l:'Bakery'},{v:'produce',l:'Fresh Produce'},{v:'cooked',l:'Cooked Meals'}].map(c => (
             <button key={c.v} onClick={() => setCategory(c.v)} className={`whitespace-nowrap pb-2 text-sm font-bold transition border-b-2 ${category === c.v ? 'border-primary text-primary' : 'border-transparent text-text/50 hover:text-text'}`}>
@@ -164,7 +157,6 @@ const ConsumerMarketplace = () => {
         </div>
       </div>
 
-      {/* ── Product Grid ── */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -182,7 +174,6 @@ const ConsumerMarketplace = () => {
                 <div className="relative h-48 bg-gray-50">
                   <img src={p.image} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt={p.name} />
                   
-                  {/* Badges */}
                   <div className="absolute top-2 left-2 flex flex-col gap-2">
                     {p.urgentBadge && <span className="bg-red-500 text-white text-[10px] uppercase font-black px-2.5 py-1 rounded-sm shadow-md animate-pulse">🔥 Urgent</span>}
                     {p.distance !== undefined && <span className="bg-black/70 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-sm">📍 {p.distance.toFixed(1)}km</span>}
@@ -198,7 +189,6 @@ const ConsumerMarketplace = () => {
                        <p className="text-2xl font-black text-text">₹{p.finalPrice}</p>
                        <p className="text-sm text-text/40 line-through mb-1">₹{p.mrp}</p>
                     </div>
-                    {/* Expiry Countdown component integrates nicely into the marketplace too */}
                     <CountdownTimer expiresAt={p.expiresAt} />
                   </div>
                   
@@ -215,7 +205,6 @@ const ConsumerMarketplace = () => {
         )}
       </div>
 
-      {/* ── Cart Drawer Overlay ── */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCartOpen(false)}></div>

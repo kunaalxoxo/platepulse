@@ -24,9 +24,13 @@ const CommunityShare = () => {
   }, []);
 
   const fetchShares = async () => {
-    if (!location.lat) return;
+    // Always update loading state — don't early-return before setLoading
+    setLoading(true);
     try {
-      setLoading(true);
+      if (!location.lat) {
+        setShares([]);
+        return;
+      }
       const res = await api.get(`/community?lat=${location.lat}&lng=${location.lng}&radius=${radius}`);
       setShares(res.data.data);
     } catch (err) { console.error(err); }
