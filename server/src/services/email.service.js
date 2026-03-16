@@ -28,24 +28,34 @@ const buildEmailHTML = ({ greeting, message, otp, footer }) => `
   </div>
 </div>`;
 
-// Send email via Resend API (HTTPS — never blocked by Render)
 const sendEmail = ({ to, subject, html }) => {
   return new Promise((resolve, reject) => {
-    if (!env.RESEND_API_KEY) {
-      logger.warn('RESEND_API_KEY not set — skipping email');
+    if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) {
+      logger.warn('Mailjet not configured — skipping email');
       return resolve();
     }
 
-    const fromAddress = env.EMAIL_FROM || 'PlatePulse <onboarding@resend.dev>';
-    const body = JSON.stringify({ from: fromAddress, to, subject, html });
+    const fromEmail = env.EMAIL_FROM || 'urfav.kunaal@gmail.com';
+    const fromName = env.EMAIL_FROM_NAME || 'PlatePulse';
+
+    const body = JSON.stringify({
+      Messages: [{
+        From: { Email: fromEmail, Name: fromName },
+        To: [{ Email: to }],
+        Subject: subject,
+        HTMLPart: html,
+      }],
+    });
+
+    const auth = Buffer.from(`${env.MAILJET_API_KEY}:${env.MAILJET_SECRET_KEY}`).toString('base64');
 
     const req = https.request(
       {
-        hostname: 'api.resend.com',
-        path: '/emails',
+        hostname: 'api.mailjet.com',
+        path: '/v3.1/send',
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          Authorization: `Basic ${auth}`,
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(body),
         },
@@ -57,7 +67,7 @@ const sendEmail = ({ to, subject, html }) => {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(JSON.parse(data));
           } else {
-            reject(new Error(`Resend API error ${res.statusCode}: ${data}`));
+            reject(new Error(`Mailjet error ${res.statusCode}: ${data}`));
           }
         });
       }
@@ -116,12 +126,7 @@ const sendMatchNotification = async (email, name, donationName, distance) => {
       </div>
     </div>
   </div>`;
-
-  await sendEmail({
-    to: email,
-    subject: 'New food donation nearby — PlatePulse',
-    html,
-  });
+  await sendEmail({ to: email, subject: 'New food donation nearby — PlatePulse', html });
   logger.info(`Match notification sent to ${email}`);
 };
 
