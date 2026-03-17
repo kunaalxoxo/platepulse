@@ -21,7 +21,7 @@ const impactRoutes       = require('./routes/impact.routes');
 const adminRoutes        = require('./routes/admin.routes');
 const mapRoutes          = require('./routes/map.routes');
 const qrRoutes           = require('./routes/qr.routes');
-const seedRoutes         = require('./routes/seed.routes'); // TEMP
+const seedRoutes         = require('./routes/seed.routes');
 
 const app = express();
 
@@ -63,7 +63,7 @@ app.use('/api/v1/impact',        impactRoutes);
 app.use('/api/v1/admin',         adminRoutes);
 app.use('/api/v1/map',           mapRoutes);
 app.use('/api/v1/qr',            qrRoutes);
-app.use('/api/v1/seed',          seedRoutes); // TEMP — remove after seeding
+app.use('/api/v1/seed',          seedRoutes);
 
 app.get('/api/v1/health', (req, res) => {
   res.json({ success: true, message: 'PlatePulse API is running', data: { uptime: process.uptime() } });
