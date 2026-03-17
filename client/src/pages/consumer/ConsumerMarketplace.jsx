@@ -17,17 +17,15 @@ const ConsumerMarketplace = () => {
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Store resolved GPS coords — null means not yet resolved
   const locationRef = useRef({ lat: null, lng: null });
 
-  // ── Step 1: fetch WITHOUT coords immediately on mount ─────────────────
-  // This guarantees products appear instantly, no GPS wait.
+  // ── Phase 1: instant load without GPS ───────────────────────────────────
   const fetchWithoutGeo = useCallback(async (cat, urgent) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (cat)           params.append('category',   cat);
-      if (urgent)        params.append('urgentOnly',  'true');
+      if (cat)    params.append('category',  cat);
+      if (urgent) params.append('urgentOnly', 'true');
       const res = await api.get(`/products?${params.toString()}`);
       setProducts(res.data.data);
     } catch (err) {
@@ -37,24 +35,22 @@ const ConsumerMarketplace = () => {
     }
   }, []);
 
-  // ── Step 2: fetch WITH coords — only REPLACE list if results come back ─
-  // If geo returns 0 (user is far from stores) the original list is kept.
+  // ── Phase 2: geo-sorted fetch — only replaces list when results > 0 ─────
   const fetchWithGeo = useCallback(async (lat, lng, cat, urgent) => {
     try {
       const params = new URLSearchParams();
-      if (cat)    params.append('category',   cat);
-      if (urgent) params.append('urgentOnly',  'true');
+      if (cat)    params.append('category',  cat);
+      if (urgent) params.append('urgentOnly', 'true');
       params.append('lat',    lat);
       params.append('lng',    lng);
       params.append('radius', 50);
       const res = await api.get(`/products?${params.toString()}`);
       const geoProducts = res.data.data;
       if (geoProducts.length > 0) {
-        // User is near stores — show geo-sorted results
         setProducts(geoProducts);
         setGeoStatus('granted');
       } else {
-        // No stores nearby — keep the full list already shown, just mark geo as granted
+        // No stores nearby — keep the full list, just acknowledge geo
         setGeoStatus('granted');
       }
     } catch (err) {
@@ -62,33 +58,25 @@ const ConsumerMarketplace = () => {
     }
   }, []);
 
-  // ── Kick off instant load on mount ────────────────────────────────────
+  // ── Mount: instant load ──────────────────────────────────────────────────
   useEffect(() => {
     fetchWithoutGeo(category, urgentOnly);
   }, []);
 
-  // ── Re-fetch without geo when filters change ──────────────────────────
-  // If geo was already granted, also re-fetch with geo
+  // ── Filter change: re-fetch then re-apply geo if available ───────────────
   useEffect(() => {
     fetchWithoutGeo(category, urgentOnly).then(() => {
       const { lat, lng } = locationRef.current;
-      if (lat && lng) {
-        fetchWithGeo(lat, lng, category, urgentOnly);
-      }
+      if (lat && lng) fetchWithGeo(lat, lng, category, urgentOnly);
     });
   }, [category, urgentOnly]);
 
-  // ── Request GPS in background — never blocks initial render ───────────
+  // ── GPS: background, never blocks render ────────────────────────────────
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setGeoStatus('denied');
-      return;
-    }
+    if (!navigator.geolocation) { setGeoStatus('denied'); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
+      ({ coords: { latitude: lat, longitude: lng } }) => {
         locationRef.current = { lat, lng };
-        // Re-fetch with geo now that we have coords
         fetchWithGeo(lat, lng, category, urgentOnly);
       },
       () => setGeoStatus('denied'),
@@ -96,41 +84,39 @@ const ConsumerMarketplace = () => {
     );
   }, []);
 
-  // ── Socket live price updates ─────────────────────────────────────────
+  // ── Socket: live price patches ───────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
-    const handlePriceUpdate = (data) => {
+    const handle = (data) =>
       setProducts(prev => prev.map(p =>
         p._id === data.productId
           ? { ...p, finalPrice: data.finalPrice, discountPercent: data.discountPercent, urgentBadge: data.urgentBadge }
           : p
       ));
-    };
-    socket.on('price_updated', handlePriceUpdate);
-    return () => socket.off('price_updated', handlePriceUpdate);
+    socket.on('price_updated', handle);
+    return () => socket.off('price_updated', handle);
   }, [socket]);
 
-  // ── Razorpay script ───────────────────────────────────────────────────
+  // ── Razorpay ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (document.querySelector('script[src*="razorpay"]')) return;
-    const script = document.createElement('script');
-    script.src   = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.async = true;
+    document.body.appendChild(s);
   }, []);
 
-  // ── Checkout ──────────────────────────────────────────────────────────
+  // ── Checkout ─────────────────────────────────────────────────────────────
   const handleCheckout = async () => {
     if (!user) { alert('Please log in as a consumer to purchase.'); return; }
     try {
-      const payload = { items: items.map(i => ({ productId: i._id, quantity: i.quantity })) };
-      const { data } = await api.post('/orders/create-order', payload);
+      const { data } = await api.post('/orders/create-order', {
+        items: items.map(i => ({ productId: i._id, quantity: i.quantity })),
+      });
       const { orderId, razorpayOrderId, amount, key, currency } = data.data;
-
       const options = {
         key: key === 'mock_key' ? null : key,
-        amount,
-        currency,
+        amount, currency,
         name: 'PlatePulse Marketplace',
         description: 'Near-expiry food purchase',
         order_id: razorpayOrderId,
@@ -146,31 +132,32 @@ const ConsumerMarketplace = () => {
             setIsCartOpen(false);
             alert('🎉 Checkout successful! You are helping heal the planet.');
             fetchWithoutGeo(category, urgentOnly);
-          } catch (verifyErr) {
-            alert(verifyErr.response?.data?.message || 'Payment verification failed');
-          }
+          } catch (e) { alert(e.response?.data?.message || 'Payment verification failed'); }
         },
         prefill: { name: user.name, email: user.email },
         theme: { color: '#2E7D32' },
       };
-
       if (key === 'mock_key') {
-        alert('DEV MODE: Simulating Razorpay successful checkout...');
+        alert('DEV MODE: Simulating Razorpay checkout...');
         options.handler({ razorpay_order_id: razorpayOrderId, razorpay_payment_id: 'rzp_mock', razorpay_signature: 'mock' });
       } else {
-        const rzp = new window.Razorpay(options);
-        rzp.open();
+        new window.Razorpay(options).open();
       }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to initiate checkout');
-    }
+    } catch (err) { alert(err.response?.data?.message || 'Failed to initiate checkout'); }
   };
 
-  // ─────────────────────────────────────────────────────────────────────
+  // ── Distance formatter (metres → km, 1 decimal) ──────────────────────────
+  // $geoNear returns distance in METRES. Display as km.
+  const fmtDist = (metres) => {
+    if (metres === undefined || metres === null) return null;
+    return `${(metres / 1000).toFixed(1)} km`;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="relative min-h-screen bg-surface">
 
-      {/* ── Sticky header ── */}
+      {/* Sticky header */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -190,10 +177,7 @@ const ConsumerMarketplace = () => {
             >
               🔥 <span className="hidden sm:inline">Last Chance Deals</span>
             </button>
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition"
-            >
+            <button onClick={() => setIsCartOpen(true)} className="relative p-2 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition">
               <span className="text-xl">🛒</span>
               {items.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-sm">
@@ -204,7 +188,7 @@ const ConsumerMarketplace = () => {
           </div>
         </div>
 
-        {/* Category tabs */}
+        {/* Category tabs — includes Dairy which matches seeded categories */}
         <div className="max-w-7xl mx-auto px-4 pb-2 flex gap-6 overflow-x-auto hide-scrollbar">
           {[
             { v: '',         l: 'All' },
@@ -227,13 +211,11 @@ const ConsumerMarketplace = () => {
         </div>
       </div>
 
-      {/* ── Product grid ── */}
+      {/* Product grid */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i} className="h-80 bg-gray-100 animate-pulse rounded-2xl" />
-            ))}
+            {[1,2,3,4,5,6].map(i => <div key={i} className="h-80 bg-gray-100 animate-pulse rounded-2xl" />)}
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
@@ -253,13 +235,12 @@ const ConsumerMarketplace = () => {
                   />
                   <div className="absolute top-2 left-2 flex flex-col gap-1">
                     {p.urgentBadge && (
-                      <span className="bg-red-500 text-white text-[10px] uppercase font-black px-2.5 py-1 rounded-sm shadow-md animate-pulse">
-                        🔥 Urgent
-                      </span>
+                      <span className="bg-red-500 text-white text-[10px] uppercase font-black px-2.5 py-1 rounded-sm shadow-md animate-pulse">🔥 Urgent</span>
                     )}
-                    {p.distance !== undefined && (
+                    {/* Distance: $geoNear returns metres — convert to km */}
+                    {p.distance != null && (
                       <span className="bg-black/70 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-sm">
-                        📍 {(p.distance / 1000).toFixed(1)} km
+                        📍 {fmtDist(p.distance)}
                       </span>
                     )}
                   </div>
@@ -273,9 +254,7 @@ const ConsumerMarketplace = () => {
                 <div className="p-4 flex flex-col flex-1 justify-between gap-4">
                   <div>
                     <h3 className="font-bold text-lg text-text line-clamp-1">{p.name}</h3>
-                    <p className="text-xs font-semibold text-primary mb-2 line-clamp-1">
-                      {p.retailer?.orgName || 'Local Store'}
-                    </p>
+                    <p className="text-xs font-semibold text-primary mb-2 line-clamp-1">{p.retailer?.orgName || 'Local Store'}</p>
                     <div className="flex items-end gap-2 mb-2">
                       <p className="text-2xl font-black text-text">₹{p.finalPrice}</p>
                       <p className="text-sm text-text/40 line-through mb-1">₹{p.mrp}</p>
@@ -298,25 +277,19 @@ const ConsumerMarketplace = () => {
         )}
       </div>
 
-      {/* ── Cart sidebar ── */}
+      {/* Cart sidebar */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
           <div className="relative w-full max-w-md bg-white h-full flex flex-col animate-slide-in-right shadow-2xl border-l border-gray-100">
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-xl font-heading font-black">Your Checkout Cart</h2>
-              <button
-                onClick={() => setIsCartOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 font-bold"
-              >
-                ×
-              </button>
+              <button onClick={() => setIsCartOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 font-bold">×</button>
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {items.length === 0 ? (
                 <div className="text-center py-20 opacity-50">
-                  <span className="text-4xl block mb-2">🛍️</span>
-                  <p>Your cart is empty</p>
+                  <span className="text-4xl block mb-2">🛍️</span><p>Your cart is empty</p>
                 </div>
               ) : items.map(item => (
                 <div key={item._id} className="flex gap-4 p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
@@ -339,14 +312,8 @@ const ConsumerMarketplace = () => {
               ))}
             </div>
             <div className="p-5 border-t border-gray-100 bg-gray-50/50">
-              <div className="flex justify-between text-sm mb-2 text-text/60">
-                <span>Items ({items.length})</span>
-                <span>₹{getCartTotal().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-black mb-5">
-                <span>Subtotal</span>
-                <span className="text-primary">₹{getCartTotal().toFixed(2)}</span>
-              </div>
+              <div className="flex justify-between text-sm mb-2 text-text/60"><span>Items ({items.length})</span><span>₹{getCartTotal().toFixed(2)}</span></div>
+              <div className="flex justify-between text-lg font-black mb-5"><span>Subtotal</span><span className="text-primary">₹{getCartTotal().toFixed(2)}</span></div>
               <button
                 onClick={handleCheckout}
                 disabled={items.length === 0}
