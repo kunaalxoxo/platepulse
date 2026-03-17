@@ -25,7 +25,6 @@ const createProduct = asyncHandler(async (req, res) => {
   const [lng, lat] = storeLocation.coordinates;
   const parsedMrp = parseFloat(mrp);
 
-  // Synchronously compute initial markup/discount at creation time
   const discResult = calculateDiscount(expiresAt);
 
   const product = await Product.create({
@@ -53,52 +52,23 @@ const createProduct = asyncHandler(async (req, res) => {
 // ─── GET /api/v1/products ────────────────────────────────────────────────
 
 const getProducts = asyncHandler(async (req, res) => {
-  const { category, lat, lng, radius, urgentOnly, page = 1, limit = 20, cursor } = req.query;
-  const parsedLimit = Math.min(parseInt(limit, 10), 50);
+  const { category, urgentOnly, limit = 50 } = req.query;
+  const parsedLimit = Math.min(parseInt(limit, 10), 100);
 
-  // Base Public Filter
+  // Show ALL active products — no geo filter so demo works from anywhere
   const filter = { isActive: true };
   if (category) filter.category = category;
   if (urgentOnly === 'true') filter.urgentBadge = true;
 
-  if (cursor) {
-    filter._id = { $gt: cursor };
-  }
-
-  let products;
-
-  if (lat && lng) {
-    const maxDist = (parseInt(radius, 10) || 50) * 1000; // default 50km for store purchases
-    products = await Product.aggregate([
-      {
-        $geoNear: {
-          near: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-          distanceField: 'distance',
-          maxDistance: maxDist,
-          spherical: true,
-          query: filter
-        }
-      },
-      // Secondary sort to push heavily discounted / urgent items to the top within geo range
-      { $sort: { discountPercent: -1 } },
-      { $limit: parsedLimit }
-    ]);
-
-    await Product.populate(products, { path: 'retailer', select: 'name orgName location' });
-  } else {
-    products = await Product.find(filter)
-      .populate('retailer', 'name orgName')
-      .sort({ discountPercent: -1, _id: 1 })
-      .limit(parsedLimit);
-  }
+  const products = await Product.find(filter)
+    .populate('retailer', 'name orgName')
+    .sort({ discountPercent: -1, createdAt: -1 })
+    .limit(parsedLimit);
 
   return res.status(200).json({
     success: true,
     data: products,
-    pagination: {
-      count: products.length,
-      nextCursor: products.length === parsedLimit ? products[products.length - 1]._id : null
-    }
+    pagination: { count: products.length }
   });
 });
 
@@ -133,15 +103,12 @@ const updateProduct = asyncHandler(async (req, res) => {
   }
 
   const updates = req.body;
-  delete updates.retailer; // Protect
+  delete updates.retailer;
 
-  // If expiry or mrp changes, we must recalculate the dynamic discount block
   if (updates.expiresAt || updates.mrp) {
     const tgtExpiry = updates.expiresAt || product.expiresAt;
     const tgtMrp = updates.mrp || product.mrp;
-    
     const discResult = calculateDiscount(tgtExpiry);
-    
     updates.discountPercent = discResult.discount;
     updates.isActive = discResult.isActive;
     updates.urgentBadge = discResult.urgentBadge;
@@ -164,7 +131,6 @@ const deleteProduct = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'Not authorized to delete' });
   }
 
-  // Soft delete wrapper preserving historical order data
   product.isActive = false;
   await product.save();
 
