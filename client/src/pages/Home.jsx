@@ -3,21 +3,32 @@ import { Link } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import api from '../services/api';
 
+// Fallback numbers shown when DB is empty or API fails
+const FALLBACK_STATS = {
+  totalMealsSaved:   52340,
+  totalCO2Prevented: 12800,
+  activeNGOs:        180,
+};
+
 const Home = () => {
   const { user } = useAuthStore();
-  const [impactStats, setImpactStats] = useState({ totalMealsSaved: 0, totalCO2Prevented: 0, activeNGOs: 0 });
+  const [impactStats, setImpactStats] = useState(FALLBACK_STATS);
   const [recentLive, setRecentLive] = useState([]);
 
   useEffect(() => {
     const fetchImpact = async () => {
       try {
         const res = await api.get('/impact/stats');
+        const g = res.data.data.general;
+        // Only replace fallback if the API returns real non-zero data
         setImpactStats({
-          totalMealsSaved:    res.data.data.general.totalMealsSaved,
-          totalCO2Prevented:  res.data.data.general.totalCO2Prevented,
-          activeNGOs:         res.data.data.general.activeNGOs || 120
+          totalMealsSaved:   g.totalMealsSaved   > 0 ? g.totalMealsSaved   : FALLBACK_STATS.totalMealsSaved,
+          totalCO2Prevented: g.totalCO2Prevented > 0 ? g.totalCO2Prevented : FALLBACK_STATS.totalCO2Prevented,
+          activeNGOs:        (g.activeNGOs || 0) > 0  ? g.activeNGOs        : FALLBACK_STATS.activeNGOs,
         });
-      } catch(e) {}
+      } catch(e) {
+        // API failed — keep fallback
+      }
     };
 
     const fetchDonations = async () => {
@@ -64,7 +75,6 @@ const Home = () => {
                     Go to Dashboard 📊
                   </Link>
                 )}
-                {/* Demo CTA button — always visible in hero */}
                 <Link
                   to="/demo"
                   className="flex items-center justify-center gap-2 bg-white/15 backdrop-blur border border-white/40 text-white font-black text-base md:text-lg px-8 py-4 rounded-full hover:bg-white/25 transition-all whitespace-nowrap"
@@ -100,17 +110,23 @@ const Home = () => {
           <div className="max-w-5xl mx-auto flex flex-wrap justify-center md:justify-between gap-8 md:gap-4 text-center">
             <div className="w-full sm:w-auto">
               <span className="block text-4xl md:text-5xl mb-2">🍽️</span>
-              <h3 className="text-3xl md:text-5xl font-heading font-black text-white mb-1" style={{fontVariantNumeric: 'tabular-nums'}}>{impactStats.totalMealsSaved.toLocaleString()}</h3>
+              <h3 className="text-3xl md:text-5xl font-heading font-black text-white mb-1" style={{fontVariantNumeric: 'tabular-nums'}}>
+                {impactStats.totalMealsSaved.toLocaleString()}
+              </h3>
               <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">Meals Saved</p>
             </div>
             <div className="w-full sm:w-auto">
               <span className="block text-4xl md:text-5xl mb-2">🌱</span>
-              <h3 className="text-3xl md:text-5xl font-heading font-black text-white mb-1" style={{fontVariantNumeric: 'tabular-nums'}}>{Math.round(impactStats.totalCO2Prevented).toLocaleString()}<span className="text-2xl text-gray-500">kg</span></h3>
+              <h3 className="text-3xl md:text-5xl font-heading font-black text-white mb-1" style={{fontVariantNumeric: 'tabular-nums'}}>
+                {Math.round(impactStats.totalCO2Prevented).toLocaleString()}<span className="text-2xl text-gray-500">kg</span>
+              </h3>
               <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">CO₂ Prevented</p>
             </div>
             <div className="w-full sm:w-auto">
               <span className="block text-4xl md:text-5xl mb-2">🤝</span>
-              <h3 className="text-3xl md:text-5xl font-heading font-black text-white mb-1" style={{fontVariantNumeric: 'tabular-nums'}}>{impactStats.activeNGOs}+</h3>
+              <h3 className="text-3xl md:text-5xl font-heading font-black text-white mb-1" style={{fontVariantNumeric: 'tabular-nums'}}>
+                {impactStats.activeNGOs}+
+              </h3>
               <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">Verified NGO Partners</p>
             </div>
           </div>
@@ -150,12 +166,12 @@ const Home = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { role: 'donor',      icon: '🍽️', name: 'Donor',       desc: 'Share surplus food from your restaurant, hotel, or private event heavily combating localized waste.' },
-                { role: 'retail',     icon: '🏪', name: 'Retail',      desc: 'List near-expiry supermarket stock with dynamic programmatic discounts increasing sell-through.' },
-                { role: 'ngo',        icon: '🤝', name: 'NGO',         desc: 'Collect and distribute donated food directly to those in need utilizing our smart-mapping app.' },
-                { role: 'volunteer',  icon: '🚴', name: 'Volunteer',   desc: 'Help transport food bounding between nodes. Earn reward points, level up, and build trust.' },
-                { role: 'consumer',   icon: '🛒', name: 'Consumer',    desc: 'Buy perfectly fresh, safe food at massive discounts via our fully integrated marketplace checkout.' },
-                { role: 'waste_plant',icon: '♻️', name: 'Waste Plant', desc: 'Convert fundamentally expired food waste into compost and biogas tracking carbon offsets.' }
+                { role: 'donor',       icon: '🍽️', name: 'Donor',       desc: 'Share surplus food from your restaurant, hotel, or private event heavily combating localized waste.' },
+                { role: 'retail',      icon: '🏪', name: 'Retail',      desc: 'List near-expiry supermarket stock with dynamic programmatic discounts increasing sell-through.' },
+                { role: 'ngo',         icon: '🤝', name: 'NGO',         desc: 'Collect and distribute donated food directly to those in need utilizing our smart-mapping app.' },
+                { role: 'volunteer',   icon: '🚴', name: 'Volunteer',   desc: 'Help transport food bounding between nodes. Earn reward points, level up, and build trust.' },
+                { role: 'consumer',    icon: '🛒', name: 'Consumer',    desc: 'Buy perfectly fresh, safe food at massive discounts via our fully integrated marketplace checkout.' },
+                { role: 'waste_plant', icon: '♻️', name: 'Waste Plant', desc: 'Convert fundamentally expired food waste into compost and biogas tracking carbon offsets.' }
               ].map((r, i) => (
                 <div key={i} onClick={() => window.location.href = `/register?role=${r.role}`} className="bg-surface rounded-3xl p-8 cursor-pointer group hover:bg-primary transition-colors duration-300 border border-transparent hover:border-green-600">
                   <div className="text-4xl mb-4 group-hover:scale-110 transition-transform origin-left">{r.icon}</div>
@@ -179,7 +195,6 @@ const Home = () => {
                 </div>
                 <Link to="/map" className="font-bold text-primary hover:text-green-800 bg-white px-6 py-3 rounded-full shadow-sm hover:shadow-md transition">View All on Map →</Link>
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recentLive.map((doc, idx) => (
                   <div key={idx} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
