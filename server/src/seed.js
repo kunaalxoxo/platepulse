@@ -18,33 +18,31 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const User          = require('./models/User');
-const Donation      = require('./models/Donation');
-const Mission       = require('./models/Mission');
-const Product       = require('./models/Product');
-const Order         = require('./models/Order');
+const User           = require('./models/User');
+const Donation       = require('./models/Donation');
+const Mission        = require('./models/Mission');
+const Product        = require('./models/Product');
+const Order          = require('./models/Order');
 const CommunityShare = require('./models/CommunityShare');
-const WasteRequest  = require('./models/WasteRequest');
-const ImpactLog     = require('./models/ImpactLog');
+const WasteRequest   = require('./models/WasteRequest');
+const ImpactLog      = require('./models/ImpactLog');
 
-// ─── Kochi area coordinates (lng, lat) ───────────────────────────────────────
+// ─── Hyderabad area coordinates (lng, lat) ───────────────────────────────────
 const LOCATIONS = {
-  ernakulam:   { coordinates: [76.2673, 9.9816],  address: 'MG Road, Ernakulam, Kochi, Kerala' },
-  fort_kochi:  { coordinates: [76.2144, 9.9639],  address: 'Beach Road, Fort Kochi, Kerala' },
-  kakkanad:    { coordinates: [76.3408, 10.0160], address: 'Infopark Road, Kakkanad, Kochi, Kerala' },
-  aluva:       { coordinates: [76.3502, 10.1004], address: 'Market Road, Aluva, Ernakulam, Kerala' },
-  thrippunithura: { coordinates: [76.3510, 9.9370], address: 'Hill Palace Road, Tripunithura, Kerala' },
-  edapally:    { coordinates: [76.3012, 10.0200], address: 'Edapally Junction, NH 66, Kochi, Kerala' },
-  vyttila:     { coordinates: [76.3104, 9.9617],  address: 'Vyttila Hub, NH 66, Kochi, Kerala' },
-  palarivattom:{ coordinates: [76.3022, 10.0042], address: 'Palarivattom Junction, Kochi, Kerala' },
+  banjara_hills:  { coordinates: [78.4483, 17.4126], address: 'Road No. 12, Banjara Hills, Hyderabad, Telangana' },
+  jubilee_hills:  { coordinates: [78.4068, 17.4321], address: 'Film Nagar Road, Jubilee Hills, Hyderabad, Telangana' },
+  hitech_city:    { coordinates: [78.3816, 17.4498], address: 'Cyber Towers, HITEC City, Hyderabad, Telangana' },
+  secunderabad:   { coordinates: [78.4983, 17.4399], address: 'MG Road, Secunderabad, Hyderabad, Telangana' },
+  old_city:       { coordinates: [78.4740, 17.3616], address: 'Charminar Road, Old City, Hyderabad, Telangana' },
+  gachibowli:     { coordinates: [78.3428, 17.4401], address: 'DLF Cyber City, Gachibowli, Hyderabad, Telangana' },
+  kompally:       { coordinates: [78.4863, 17.5410], address: 'Kompally Main Road, Medchal, Hyderabad, Telangana' },
+  lb_nagar:       { coordinates: [78.5535, 17.3490], address: 'LB Nagar Circle, Hyderabad, Telangana' },
 };
 
-const hash = (pw) => bcrypt.hash(pw, 12);
-
-const now    = new Date();
-const hrs    = (n) => new Date(now.getTime() + n * 3600000);
-const mins   = (n) => new Date(now.getTime() + n * 60000);
-const daysAgo= (n) => new Date(now.getTime() - n * 86400000);
+const hash    = (pw) => bcrypt.hash(pw, 12);
+const now     = new Date();
+const hrs     = (n) => new Date(now.getTime() + n * 3600000);
+const daysAgo = (n) => new Date(now.getTime() - n * 86400000);
 
 async function seed() {
   await mongoose.connect(process.env.MONGO_URI);
@@ -71,15 +69,16 @@ async function seed() {
   const [admin, donor1, donor2, donor3, ngo1, ngo2, vol1, vol2, vol3,
          retail1, retail2, consumer1, consumer2, wastePlant1] =
     await User.insertMany([
+
       // ── Admin ──
       {
-        name: 'Arjun Nair',
+        name: 'Karthik Reddy',
         email: 'admin@platepulse.in',
         password: pw,
         role: 'admin',
         phone: '9876543210',
         orgName: 'PlatePulse HQ',
-        location: { ...LOCATIONS.ernakulam },
+        location: { ...LOCATIONS.hitech_city },
         isVerified: true,
         trustScore: 100,
         points: 9999,
@@ -88,39 +87,39 @@ async function seed() {
 
       // ── Donors ──
       {
-        name: 'Priya Menon',
+        name: 'Priya Sharma',
         email: 'priya.donor@gmail.com',
         password: pw,
         role: 'donor',
         phone: '9876500001',
-        orgName: 'Grand Hyatt Kochi',
-        location: { ...LOCATIONS.ernakulam },
+        orgName: 'Taj Falaknuma Palace Banquets',
+        location: { ...LOCATIONS.banjara_hills },
         isVerified: true,
         trustScore: 88,
         points: 750,
         badge: 'gold',
       },
       {
-        name: 'Rahul Krishnan',
+        name: 'Rahul Gupta',
         email: 'rahul.donor@gmail.com',
         password: pw,
         role: 'donor',
         phone: '9876500002',
-        orgName: 'Rahul Wedding Catering',
-        location: { ...LOCATIONS.fort_kochi },
+        orgName: 'Rahul Wedding & Events Catering',
+        location: { ...LOCATIONS.jubilee_hills },
         isVerified: true,
         trustScore: 75,
         points: 320,
         badge: 'silver',
       },
       {
-        name: 'Deepa Thomas',
-        email: 'deepa.donor@gmail.com',
+        name: 'Deepika Rao',
+        email: 'deepika.donor@gmail.com',
         password: pw,
         role: 'donor',
         phone: '9876500003',
-        orgName: 'Deepa Home Kitchen',
-        location: { ...LOCATIONS.kakkanad },
+        orgName: 'Deepika Home Kitchen',
+        location: { ...LOCATIONS.gachibowli },
         isVerified: true,
         trustScore: 65,
         points: 80,
@@ -129,26 +128,26 @@ async function seed() {
 
       // ── NGOs ──
       {
-        name: 'Sr. Anitha Joseph',
-        email: 'anitha.ngo@snehaspandan.org',
+        name: 'Father Thomas D\'Cruz',
+        email: 'thomas.ngo@rotibank.org',
         password: pw,
         role: 'ngo',
         phone: '9876500004',
-        orgName: 'Sneha Spandan Charitable Trust',
-        location: { ...LOCATIONS.fort_kochi },
+        orgName: 'Roti Bank Hyderabad',
+        location: { ...LOCATIONS.secunderabad },
         isVerified: true,
         trustScore: 95,
         points: 1200,
         badge: 'hero',
       },
       {
-        name: 'Biju Paul',
-        email: 'biju.ngo@annpurna.org',
+        name: 'Sameena Begum',
+        email: 'sameena.ngo@feedhyd.org',
         password: pw,
         role: 'ngo',
         phone: '9876500005',
-        orgName: 'Annpurna Foundation Kochi',
-        location: { ...LOCATIONS.edapally },
+        orgName: 'Feed Hyderabad Foundation',
+        location: { ...LOCATIONS.old_city },
         isVerified: true,
         trustScore: 89,
         points: 540,
@@ -157,12 +156,12 @@ async function seed() {
 
       // ── Volunteers ──
       {
-        name: 'Akshay Rajan',
-        email: 'akshay.vol@gmail.com',
+        name: 'Aakash Verma',
+        email: 'aakash.vol@gmail.com',
         password: pw,
         role: 'volunteer',
         phone: '9876500006',
-        location: { ...LOCATIONS.ernakulam },
+        location: { ...LOCATIONS.banjara_hills },
         isVerified: true,
         trustScore: 82,
         points: 610,
@@ -170,12 +169,12 @@ async function seed() {
         isAvailable: true,
       },
       {
-        name: 'Sneha Varghese',
+        name: 'Sneha Kulkarni',
         email: 'sneha.vol@gmail.com',
         password: pw,
         role: 'volunteer',
         phone: '9876500007',
-        location: { ...LOCATIONS.vyttila },
+        location: { ...LOCATIONS.lb_nagar },
         isVerified: true,
         trustScore: 70,
         points: 210,
@@ -183,40 +182,40 @@ async function seed() {
         isAvailable: true,
       },
       {
-        name: 'Midhun George',
-        email: 'midhun.vol@gmail.com',
+        name: 'Naveen Chandra',
+        email: 'naveen.vol@gmail.com',
         password: pw,
         role: 'volunteer',
         phone: '9876500008',
-        location: { ...LOCATIONS.kakkanad },
+        location: { ...LOCATIONS.gachibowli },
         isVerified: true,
         trustScore: 60,
         points: 55,
         badge: 'bronze',
-        isAvailable: false, // currently busy
+        isAvailable: false, // currently busy on another task
       },
 
       // ── Retailers ──
       {
-        name: 'Sajith Kumar',
-        email: 'sajith.retail@freshmart.com',
+        name: 'Suresh Agarwal',
+        email: 'suresh.retail@bigbasket-hyd.com',
         password: pw,
         role: 'retail',
         phone: '9876500009',
-        orgName: 'FreshMart Superstore Kochi',
-        location: { ...LOCATIONS.palarivattom },
+        orgName: 'More Supermarket — Banjara Hills',
+        location: { ...LOCATIONS.banjara_hills },
         isVerified: true,
         trustScore: 91,
         points: 0,
       },
       {
-        name: 'Latha Pillai',
-        email: 'latha.retail@naturals.com',
+        name: 'Lakshmi Naidu',
+        email: 'lakshmi.retail@organic-hyd.com',
         password: pw,
         role: 'retail',
         phone: '9876500010',
-        orgName: 'Naturals Organic Store',
-        location: { ...LOCATIONS.thrippunithura },
+        orgName: 'Nature\'s Basket Organic Store — Gachibowli',
+        location: { ...LOCATIONS.gachibowli },
         isVerified: true,
         trustScore: 84,
         points: 0,
@@ -224,23 +223,23 @@ async function seed() {
 
       // ── Consumers ──
       {
-        name: 'Vivek Suresh',
-        email: 'vivek.consumer@gmail.com',
+        name: 'Vikram Mehta',
+        email: 'vikram.consumer@gmail.com',
         password: pw,
         role: 'consumer',
         phone: '9876500011',
-        location: { ...LOCATIONS.palarivattom },
+        location: { ...LOCATIONS.hitech_city },
         isVerified: true,
         trustScore: 70,
         points: 0,
       },
       {
-        name: 'Meera Das',
-        email: 'meera.consumer@gmail.com',
+        name: 'Meghana Iyer',
+        email: 'meghana.consumer@gmail.com',
         password: pw,
         role: 'consumer',
         phone: '9876500012',
-        location: { ...LOCATIONS.edapally },
+        location: { ...LOCATIONS.jubilee_hills },
         isVerified: true,
         trustScore: 70,
         points: 0,
@@ -248,13 +247,13 @@ async function seed() {
 
       // ── Waste Plant ──
       {
-        name: 'Sreejith Pillai',
-        email: 'sreejith.waste@greenkochi.gov.in',
+        name: 'Ramesh Babu',
+        email: 'ramesh.waste@ghmc.gov.in',
         password: pw,
         role: 'waste_plant',
         phone: '9876500013',
-        orgName: 'Green Kochi Waste Management Plant',
-        location: { ...LOCATIONS.aluva },
+        orgName: 'GHMC Bio-Compost Plant — Jawaharnagar',
+        location: { ...LOCATIONS.kompally },
         isVerified: true,
         trustScore: 90,
         points: 0,
@@ -267,193 +266,205 @@ async function seed() {
   // 2. DONATIONS
   // ─────────────────────────────────────────────────────────────────────────
   const donations = await Donation.insertMany([
+
     // ── Scenario A: Available — fresh, plenty of time ──
     {
       donor: donor1._id,
-      name: 'Biriyani & Raita (Wedding Banquet Surplus)',
+      name: 'Hyderabadi Dum Biryani & Mirchi Ka Salan (Wedding Surplus)',
       category: 'cooked',
-      quantity: 80,
+      quantity: 100,
       quantityUnit: 'portions',
       image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400',
       aiValidated: true,
-      aiConfidence: 94,
+      aiConfidence: 95,
       preparedAt: new Date(now.getTime() - 1 * 3600000),
       expiresAt: hrs(22),
-      pickupLocation: { ...LOCATIONS.ernakulam, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.banjara_hills, type: 'Point' },
       status: 'available',
-      specialInstructions: 'Please bring containers. Food is hot and sealed.',
+      specialInstructions: 'Hot and sealed in steel containers. Please bring your own boxes.',
     },
+
     // ── Scenario B: Available — urgent (<6h) ──
     {
       donor: donor2._id,
-      name: 'White Bread Loaves (Day-old)',
+      name: 'Osmania Biscuits & Irani Chai Snacks (Bakery Surplus)',
       category: 'bakery',
-      quantity: 30,
+      quantity: 20,
       quantityUnit: 'boxes',
       image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400',
       aiValidated: true,
-      aiConfidence: 88,
+      aiConfidence: 87,
       preparedAt: daysAgo(1),
       expiresAt: hrs(4),
-      pickupLocation: { ...LOCATIONS.fort_kochi, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.jubilee_hills, type: 'Point' },
       status: 'available',
-      specialInstructions: 'Box the bread carefully. Available from 6 AM onwards.',
+      specialInstructions: 'Available from 7 AM. Ring the bell at the side entrance.',
     },
+
     // ── Scenario C: Available — warning zone (<24h) ──
     {
       donor: donor1._id,
-      name: 'Paneer Butter Masala + Rotis',
+      name: 'Paneer Tikka Masala + Butter Naan',
       category: 'cooked',
-      quantity: 40,
+      quantity: 45,
       quantityUnit: 'portions',
       image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=400',
       aiValidated: true,
-      aiConfidence: 91,
+      aiConfidence: 92,
       preparedAt: new Date(now.getTime() - 5 * 3600000),
       expiresAt: hrs(18),
-      pickupLocation: { ...LOCATIONS.ernakulam, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.banjara_hills, type: 'Point' },
       status: 'available',
     },
+
     // ── Scenario D: Available — raw produce ──
     {
       donor: donor3._id,
-      name: 'Mixed Vegetables (Carrot, Beans, Beetroot)',
+      name: 'Mixed Vegetables — Tomatoes, Onions, Capsicum (Wholesale Surplus)',
       category: 'raw',
-      quantity: 12,
+      quantity: 15,
       quantityUnit: 'kg',
       image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400',
       aiValidated: true,
-      aiConfidence: 96,
+      aiConfidence: 97,
       expiresAt: hrs(48),
-      pickupLocation: { ...LOCATIONS.kakkanad, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.gachibowli, type: 'Point' },
       status: 'available',
-      specialInstructions: 'Washed and sorted. Pickup from basement parking.',
+      specialInstructions: 'Sorted and bagged. Pickup from society gate.',
     },
+
     // ── Scenario E: Matched (NGO accepted, waiting for volunteer) ──
     {
       donor: donor2._id,
-      name: 'Fish Curry & Steamed Rice',
+      name: 'Mutton Haleem & Sheermal (Reception Dinner Leftover)',
       category: 'cooked',
-      quantity: 50,
+      quantity: 60,
       quantityUnit: 'portions',
       image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400',
       aiValidated: true,
-      aiConfidence: 85,
+      aiConfidence: 86,
       preparedAt: new Date(now.getTime() - 2 * 3600000),
       expiresAt: hrs(10),
-      pickupLocation: { ...LOCATIONS.fort_kochi, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.jubilee_hills, type: 'Point' },
       status: 'matched',
       assignedTo: ngo1._id,
     },
+
     // ── Scenario F: In Transit ──
     {
       donor: donor1._id,
-      name: 'Kerala Sadya (Onam Celebration Surplus)',
+      name: 'Bagara Baingan + Jowar Roti (Corporate Lunch Surplus)',
       category: 'cooked',
-      quantity: 120,
+      quantity: 80,
       quantityUnit: 'portions',
       image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=400',
       aiValidated: true,
-      aiConfidence: 97,
+      aiConfidence: 93,
       preparedAt: new Date(now.getTime() - 3 * 3600000),
       expiresAt: hrs(8),
-      pickupLocation: { ...LOCATIONS.ernakulam, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.hitech_city, type: 'Point' },
       status: 'in_transit',
       assignedTo: vol1._id,
       pickupConfirmedAt: new Date(now.getTime() - 30 * 60000),
     },
-    // ── Scenario G: Delivered (completed) ──
+
+    // ── Scenario G: Delivered (completed yesterday) ──
     {
       donor: donor1._id,
-      name: 'Vegetable Stew & Appam',
+      name: 'Vegetable Pulao & Raita (Hotel Buffet Surplus)',
       category: 'cooked',
-      quantity: 60,
+      quantity: 70,
       quantityUnit: 'portions',
       aiValidated: true,
-      aiConfidence: 90,
+      aiConfidence: 91,
       preparedAt: daysAgo(1),
       expiresAt: new Date(daysAgo(1).getTime() + 8 * 3600000),
-      pickupLocation: { ...LOCATIONS.ernakulam, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.banjara_hills, type: 'Point' },
       status: 'delivered',
       assignedTo: vol1._id,
       pickupConfirmedAt: daysAgo(1),
       deliveryConfirmedAt: new Date(daysAgo(1).getTime() + 2 * 3600000),
       ngoRating: 5,
     },
-    // ── Scenario H: Delivered (different volunteer) ──
+
+    // ── Scenario H: Delivered 2 days ago (different volunteer) ──
     {
       donor: donor2._id,
-      name: 'Palak Paneer & Chapati',
+      name: 'Dal Makhani & Tandoori Roti (Conference Catering)',
       category: 'cooked',
-      quantity: 35,
+      quantity: 40,
       quantityUnit: 'portions',
       aiValidated: true,
       aiConfidence: 89,
       preparedAt: daysAgo(2),
       expiresAt: new Date(daysAgo(2).getTime() + 10 * 3600000),
-      pickupLocation: { ...LOCATIONS.fort_kochi, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.jubilee_hills, type: 'Point' },
       status: 'delivered',
       assignedTo: vol2._id,
       pickupConfirmedAt: daysAgo(2),
       deliveryConfirmedAt: new Date(daysAgo(2).getTime() + 1.5 * 3600000),
       ngoRating: 4,
     },
-    // ── Scenario I: Expired (nobody picked it up in time) ──
+
+    // ── Scenario I: Expired (nobody picked it up) ──
     {
       donor: donor3._id,
-      name: 'Dal Tadka & Rice (Office Canteen)',
+      name: 'Sambar Rice & Papad (Office Canteen Leftover)',
       category: 'cooked',
-      quantity: 20,
+      quantity: 25,
       quantityUnit: 'portions',
       aiValidated: false,
-      aiConfidence: 55,
+      aiConfidence: 52,
       preparedAt: daysAgo(2),
       expiresAt: daysAgo(1),
-      pickupLocation: { ...LOCATIONS.kakkanad, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.gachibowli, type: 'Point' },
       status: 'expired',
     },
+
     // ── Scenario J: Wasted (routed to waste plant) ──
     {
       donor: donor1._id,
-      name: 'Mutton Biryani (Bulk — past safe window)',
+      name: 'Chicken Biryani — Bulk Batch (Past Safe Window)',
       category: 'cooked',
-      quantity: 45,
+      quantity: 50,
       quantityUnit: 'portions',
       aiValidated: true,
-      aiConfidence: 42,
+      aiConfidence: 38,
       preparedAt: daysAgo(3),
       expiresAt: daysAgo(2),
-      pickupLocation: { ...LOCATIONS.ernakulam, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.banjara_hills, type: 'Point' },
       status: 'wasted',
     },
+
     // ── Scenario K: Packaged goods (long expiry) ──
     {
       donor: donor2._id,
-      name: 'Sealed Biscuit Packets (Diwali Gift Surplus)',
+      name: 'Parle-G & Good Day Biscuit Packets (Corporate Gift Surplus)',
       category: 'packaged',
-      quantity: 8,
+      quantity: 10,
       quantityUnit: 'boxes',
       image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400',
       aiValidated: true,
       aiConfidence: 99,
       expiresAt: hrs(72),
-      pickupLocation: { ...LOCATIONS.fort_kochi, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.jubilee_hills, type: 'Point' },
       status: 'available',
-      specialInstructions: 'Sealed boxes — 48 packets per box.',
+      specialInstructions: 'Factory-sealed boxes. 50 packets per box.',
     },
+
     // ── Scenario L: Dairy ──
     {
       donor: donor1._id,
-      name: 'Fresh Paneer (Bulk Hotel Surplus)',
+      name: 'Fresh Paneer & Dahi (Hotel Kitchen Surplus)',
       category: 'dairy',
-      quantity: 5,
+      quantity: 6,
       quantityUnit: 'kg',
       aiValidated: true,
-      aiConfidence: 93,
+      aiConfidence: 94,
       expiresAt: hrs(36),
-      pickupLocation: { ...LOCATIONS.ernakulam, type: 'Point' },
+      pickupLocation: { ...LOCATIONS.banjara_hills, type: 'Point' },
       status: 'available',
-      specialInstructions: 'Keep refrigerated. Pickup before 10 AM.',
+      specialInstructions: 'Keep refrigerated. Pickup before 9 AM only.',
     },
   ]);
 
@@ -465,14 +476,14 @@ async function seed() {
   await Mission.insertMany([
     // Pending — NGO accepted, no volunteer yet
     {
-      donation: donations[4]._id, // Fish Curry (matched)
+      donation: donations[4]._id,
       ngoId: ngo1._id,
-      pickupAddress: LOCATIONS.fort_kochi.address,
-      pickupLat: LOCATIONS.fort_kochi.coordinates[1],
-      pickupLng: LOCATIONS.fort_kochi.coordinates[0],
-      deliveryAddress: 'Sneha Spandan Shelter, Fort Kochi',
-      deliveryLat: 9.9580,
-      deliveryLng: 76.2100,
+      pickupAddress: LOCATIONS.jubilee_hills.address,
+      pickupLat: LOCATIONS.jubilee_hills.coordinates[1],
+      pickupLng: LOCATIONS.jubilee_hills.coordinates[0],
+      deliveryAddress: 'Roti Bank Shelter, Secunderabad, Hyderabad',
+      deliveryLat: LOCATIONS.secunderabad.coordinates[1],
+      deliveryLng: LOCATIONS.secunderabad.coordinates[0],
       status: 'pending',
       pointsReward: 50,
       acceptedAt: new Date(now.getTime() - 20 * 60000),
@@ -480,15 +491,15 @@ async function seed() {
     },
     // In transit — volunteer on the way
     {
-      donation: donations[5]._id, // Kerala Sadya (in_transit)
+      donation: donations[5]._id,
       ngoId: ngo1._id,
       volunteerId: vol1._id,
-      pickupAddress: LOCATIONS.ernakulam.address,
-      pickupLat: LOCATIONS.ernakulam.coordinates[1],
-      pickupLng: LOCATIONS.ernakulam.coordinates[0],
-      deliveryAddress: 'Sneha Spandan Shelter, Fort Kochi',
-      deliveryLat: 9.9580,
-      deliveryLng: 76.2100,
+      pickupAddress: LOCATIONS.hitech_city.address,
+      pickupLat: LOCATIONS.hitech_city.coordinates[1],
+      pickupLng: LOCATIONS.hitech_city.coordinates[0],
+      deliveryAddress: 'Roti Bank Shelter, Secunderabad, Hyderabad',
+      deliveryLat: LOCATIONS.secunderabad.coordinates[1],
+      deliveryLng: LOCATIONS.secunderabad.coordinates[0],
       status: 'in_transit',
       pointsReward: 50,
       acceptedAt: new Date(now.getTime() - 45 * 60000),
@@ -496,46 +507,46 @@ async function seed() {
     },
     // Delivered — yesterday
     {
-      donation: donations[6]._id, // Vegetable Stew
+      donation: donations[6]._id,
       ngoId: ngo1._id,
       volunteerId: vol1._id,
-      pickupAddress: LOCATIONS.ernakulam.address,
-      pickupLat: LOCATIONS.ernakulam.coordinates[1],
-      pickupLng: LOCATIONS.ernakulam.coordinates[0],
-      deliveryAddress: 'Sneha Spandan Shelter, Fort Kochi',
-      deliveryLat: 9.9580,
-      deliveryLng: 76.2100,
+      pickupAddress: LOCATIONS.banjara_hills.address,
+      pickupLat: LOCATIONS.banjara_hills.coordinates[1],
+      pickupLng: LOCATIONS.banjara_hills.coordinates[0],
+      deliveryAddress: 'Roti Bank Shelter, Secunderabad, Hyderabad',
+      deliveryLat: LOCATIONS.secunderabad.coordinates[1],
+      deliveryLng: LOCATIONS.secunderabad.coordinates[0],
       status: 'delivered',
       pointsReward: 50,
       acceptedAt: daysAgo(1),
       qrToken: 'SEED_QR_TOKEN_MISSION_3',
     },
-    // Delivered — 2 days ago (different volunteer)
+    // Delivered — 2 days ago (different NGO + volunteer)
     {
-      donation: donations[7]._id, // Palak Paneer
+      donation: donations[7]._id,
       ngoId: ngo2._id,
       volunteerId: vol2._id,
-      pickupAddress: LOCATIONS.fort_kochi.address,
-      pickupLat: LOCATIONS.fort_kochi.coordinates[1],
-      pickupLng: LOCATIONS.fort_kochi.coordinates[0],
-      deliveryAddress: 'Annpurna Foundation, Edapally',
-      deliveryLat: LOCATIONS.edapally.coordinates[1],
-      deliveryLng: LOCATIONS.edapally.coordinates[0],
+      pickupAddress: LOCATIONS.jubilee_hills.address,
+      pickupLat: LOCATIONS.jubilee_hills.coordinates[1],
+      pickupLng: LOCATIONS.jubilee_hills.coordinates[0],
+      deliveryAddress: 'Feed Hyderabad Distribution Centre, Old City',
+      deliveryLat: LOCATIONS.old_city.coordinates[1],
+      deliveryLng: LOCATIONS.old_city.coordinates[0],
       status: 'delivered',
       pointsReward: 50,
       acceptedAt: daysAgo(2),
       qrToken: 'SEED_QR_TOKEN_MISSION_4',
     },
-    // Expired mission (donation expired before pickup)
+    // Expired mission (donation expired before anyone picked up)
     {
-      donation: donations[8]._id, // Dal Tadka expired
+      donation: donations[8]._id,
       ngoId: ngo2._id,
-      pickupAddress: LOCATIONS.kakkanad.address,
-      pickupLat: LOCATIONS.kakkanad.coordinates[1],
-      pickupLng: LOCATIONS.kakkanad.coordinates[0],
-      deliveryAddress: 'Annpurna Foundation, Edapally',
-      deliveryLat: LOCATIONS.edapally.coordinates[1],
-      deliveryLng: LOCATIONS.edapally.coordinates[0],
+      pickupAddress: LOCATIONS.gachibowli.address,
+      pickupLat: LOCATIONS.gachibowli.coordinates[1],
+      pickupLng: LOCATIONS.gachibowli.coordinates[0],
+      deliveryAddress: 'Feed Hyderabad Distribution Centre, Old City',
+      deliveryLat: LOCATIONS.old_city.coordinates[1],
+      deliveryLng: LOCATIONS.old_city.coordinates[0],
       status: 'expired',
       pointsReward: 50,
       acceptedAt: daysAgo(2),
@@ -548,24 +559,17 @@ async function seed() {
   // ─────────────────────────────────────────────────────────────────────────
   // 4. PRODUCTS (Retail Marketplace)
   // ─────────────────────────────────────────────────────────────────────────
-  // Discount tiers:
-  //   >= 7 days  → 0%
-  //   < 7 days   → 20%
-  //   < 4 days   → 40%
-  //   < 2 days   → 70%
-  //   < 1 day    → 80%
-
   const calcDiscount = (expiresAt) => {
     const hrsLeft = (expiresAt - now) / 3600000;
-    if (hrsLeft < 24)  return { pct: 80 };
-    if (hrsLeft < 48)  return { pct: 70 };
-    if (hrsLeft < 96)  return { pct: 40 };
-    if (hrsLeft < 168) return { pct: 20 };
-    return { pct: 0 };
+    if (hrsLeft < 24)  return 80;
+    if (hrsLeft < 48)  return 70;
+    if (hrsLeft < 96)  return 40;
+    if (hrsLeft < 168) return 20;
+    return 0;
   };
 
   const makeProduct = (retailer, name, category, mrp, qty, expiresAt, loc, active = true) => {
-    const { pct } = calcDiscount(expiresAt);
+    const pct = calcDiscount(expiresAt);
     return {
       retailer: retailer._id,
       name,
@@ -583,31 +587,31 @@ async function seed() {
 
   const products = await Product.insertMany([
     // 80% off — expires in <24h
-    makeProduct(retail1, 'Amul Full Cream Milk (500ml)', 'dairy',    28,  40, hrs(10),  LOCATIONS.palarivattom),
-    makeProduct(retail1, 'Mother Dairy Paneer (200g)',   'dairy',    65,  15, hrs(18),  LOCATIONS.palarivattom),
+    makeProduct(retail1, 'Amul Taaza Toned Milk (500ml)',         'dairy',   28,  40, hrs(10),  LOCATIONS.banjara_hills),
+    makeProduct(retail1, 'Mother Dairy Paneer Block (200g)',       'dairy',   68,  12, hrs(18),  LOCATIONS.banjara_hills),
     // 70% off — expires in 24–48h
-    makeProduct(retail1, 'Britannia Bread (400g)',       'bakery',   45,  60, hrs(36),  LOCATIONS.palarivattom),
-    makeProduct(retail2, 'Harvest Gold Multigrain Bread','bakery',   55,  25, hrs(42),  LOCATIONS.thrippunithura),
+    makeProduct(retail1, 'Britannia Whole Wheat Bread (400g)',     'bakery',  48,  55, hrs(36),  LOCATIONS.banjara_hills),
+    makeProduct(retail2, 'English Oven Multigrain Bread (500g)',   'bakery',  58,  20, hrs(42),  LOCATIONS.gachibowli),
     // 40% off — expires in 48–96h
-    makeProduct(retail1, 'Nestle Yogurt Strawberry (80g)','dairy',   22,  80, hrs(72),  LOCATIONS.palarivattom),
-    makeProduct(retail2, 'Organic Spinach Bunch',        'produce',  30,  30, hrs(60),  LOCATIONS.thrippunithura),
-    makeProduct(retail2, 'Cherry Tomatoes (250g punnet)', 'produce', 45,  20, hrs(80),  LOCATIONS.thrippunithura),
+    makeProduct(retail1, 'Epigamia Greek Yogurt Mango (90g)',      'dairy',   35,  70, hrs(72),  LOCATIONS.banjara_hills),
+    makeProduct(retail2, 'Organic Fresh Methi Bunch',              'produce', 25,  30, hrs(60),  LOCATIONS.gachibowli),
+    makeProduct(retail2, 'Cherry Tomatoes Punnet (250g)',          'produce', 50,  18, hrs(80),  LOCATIONS.gachibowli),
     // 20% off — expires in 4–7 days
-    makeProduct(retail1, 'Aashirvaad Atta (1kg)',        'grocery', 58,  50, hrs(120), LOCATIONS.palarivattom),
-    makeProduct(retail2, 'Tata Salt (1kg)',              'grocery',  22, 100, hrs(144), LOCATIONS.thrippunithura),
-    // No discount — far from expiry (but still listed)
-    makeProduct(retail1, 'Real Fruit Juice Mango (1L)',  'beverage', 85,  35, hrs(300), LOCATIONS.palarivattom, false),
-    // Out of stock / sold through
-    makeProduct(retail2, 'Amul Butter (100g)',           'dairy',    55,   0, hrs(50),  LOCATIONS.thrippunithura),
+    makeProduct(retail1, 'Aashirvaad Multigrain Atta (1kg)',       'grocery', 62,  45, hrs(120), LOCATIONS.banjara_hills),
+    makeProduct(retail2, 'Tata Rock Salt (1kg)',                   'grocery', 24, 100, hrs(144), LOCATIONS.gachibowli),
+    // No discount — far from expiry (inactive listing)
+    makeProduct(retail1, 'Paper Boat Aam Panna Juice (250ml x4)',  'beverage',80,  30, hrs(300), LOCATIONS.banjara_hills, false),
+    // Out of stock — sold through
+    makeProduct(retail2, 'Amul Gold Butter (100g)',                'dairy',   58,   0, hrs(50),  LOCATIONS.gachibowli),
   ]);
 
   console.log('🏪  Products seeded (11 products across all discount tiers)');
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 5. ORDERS (Consumer purchases)
+  // 5. ORDERS
   // ─────────────────────────────────────────────────────────────────────────
   await Order.insertMany([
-    // Vivek bought milk + bread
+    // Vikram bought milk + bread
     {
       consumer: consumer1._id,
       items: [
@@ -619,7 +623,7 @@ async function seed() {
       paymentId: 'pay_seed_test_001',
       razorpayOrderId: 'order_seed_test_001',
     },
-    // Meera bought yogurt + tomatoes
+    // Meghana bought yogurt + tomatoes
     {
       consumer: consumer2._id,
       items: [
@@ -631,7 +635,7 @@ async function seed() {
       paymentId: 'pay_seed_test_002',
       razorpayOrderId: 'order_seed_test_002',
     },
-    // Failed payment (abandoned checkout)
+    // Abandoned checkout — payment failed
     {
       consumer: consumer1._id,
       items: [
@@ -649,98 +653,98 @@ async function seed() {
   // 6. COMMUNITY SHARES
   // ─────────────────────────────────────────────────────────────────────────
   await CommunityShare.insertMany([
-    // Active — newly posted, nobody claimed yet
+    // Active — nobody claimed yet
     {
       postedBy: consumer1._id,
-      name: 'Homemade Kerala Banana Halwa',
+      name: 'Homemade Hyderabadi Double Ka Meetha',
       category: 'cooked',
-      quantity: 6,
+      quantity: 8,
       image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',
-      location: { ...LOCATIONS.palarivattom, type: 'Point' },
-      claimedByLimit: 3,
+      location: { ...LOCATIONS.hitech_city, type: 'Point' },
+      claimedByLimit: 4,
       claimedCount: 0,
       expiresAt: hrs(12),
       isActive: true,
     },
-    // Partially claimed (2 out of 4 taken)
+    // Partially claimed (2 out of 5 taken)
     {
       postedBy: consumer2._id,
-      name: 'Excess Avial & Rice from Family Feast',
+      name: 'Extra Khichdi & Pickle from Home (Amma Made)',
       category: 'cooked',
-      quantity: 8,
+      quantity: 10,
       image: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=400',
-      location: { ...LOCATIONS.edapally, type: 'Point' },
-      claimedByLimit: 4,
+      location: { ...LOCATIONS.jubilee_hills, type: 'Point' },
+      claimedByLimit: 5,
       claimedCount: 2,
       expiresAt: hrs(6),
       isActive: true,
     },
-    // Fully claimed — no slots left
+    // Fully claimed
     {
       postedBy: consumer1._id,
-      name: 'Fresh Mango from Our Tree (Alphonso)',
+      name: 'Fresh Mangoes from Our Farm (Banganapalli)',
       category: 'produce',
-      quantity: 12,
+      quantity: 15,
       image: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=400',
-      location: { ...LOCATIONS.palarivattom, type: 'Point' },
+      location: { ...LOCATIONS.hitech_city, type: 'Point' },
       claimedByLimit: 3,
       claimedCount: 3,
       expiresAt: hrs(24),
-      isActive: false, // fully claimed = inactive
+      isActive: false,
     },
-    // Expired community share
+    // Expired
     {
       postedBy: consumer2._id,
-      name: 'Leftover Payasam (Onam)',
+      name: 'Leftover Qubani Ka Meetha (Eid Celebration)',
       category: 'cooked',
-      quantity: 4,
-      location: { ...LOCATIONS.edapally, type: 'Point' },
-      claimedByLimit: 2,
+      quantity: 5,
+      location: { ...LOCATIONS.jubilee_hills, type: 'Point' },
+      claimedByLimit: 3,
       claimedCount: 0,
       expiresAt: daysAgo(1),
       isActive: false,
     },
-    // Active — raw produce
+    // Active — raw produce, partially claimed
     {
       postedBy: donor3._id,
-      name: 'Garden Fresh Curry Leaves & Coriander',
+      name: 'Garden-grown Curry Leaves, Coriander & Green Chillies',
       category: 'produce',
-      quantity: 3,
-      location: { ...LOCATIONS.kakkanad, type: 'Point' },
-      claimedByLimit: 3,
+      quantity: 4,
+      location: { ...LOCATIONS.gachibowli, type: 'Point' },
+      claimedByLimit: 4,
       claimedCount: 1,
       expiresAt: hrs(36),
       isActive: true,
     },
   ]);
 
-  console.log('🤝  Community shares seeded (5 shares: active / partial / full / expired)');
+  console.log('🤝  Community shares seeded (5 shares)');
 
   // ─────────────────────────────────────────────────────────────────────────
   // 7. WASTE REQUESTS
   // ─────────────────────────────────────────────────────────────────────────
   await WasteRequest.insertMany([
-    // Pending — just assigned to waste plant
+    // Pending — just assigned
     {
-      donation: donations[8]._id, // Dal Tadka expired
+      donation: donations[8]._id,
       wastePlant: wastePlant1._id,
       status: 'pending',
     },
-    // Confirmed — plant acknowledged, processing not yet reported
+    // Confirmed — plant acknowledged pickup
     {
-      donation: donations[9]._id, // Mutton Biryani wasted
+      donation: donations[9]._id,
       wastePlant: wastePlant1._id,
       status: 'confirmed',
       confirmedAt: new Date(now.getTime() - 3 * 3600000),
     },
-    // Completed — plant filed the yield report
+    // Completed — full yield report filed
     {
       donation: donations[9]._id,
       wastePlant: wastePlant1._id,
       status: 'completed',
-      compostKg: 18,
-      biogasLiters: 6,
-      feedKg: 3,
+      compostKg: 20,
+      biogasLiters: 8,
+      feedKg: 4,
       confirmedAt: daysAgo(2),
     },
   ]);
@@ -751,16 +755,13 @@ async function seed() {
   // 8. IMPACT LOGS
   // ─────────────────────────────────────────────────────────────────────────
   await ImpactLog.insertMany([
-    // Delivered donation logs
-    { eventType: 'donation_delivered', quantityKg: 24,  mealsSaved: 60, co2PreventedKg: 60,  referenceId: donations[6]._id },
-    { eventType: 'donation_delivered', quantityKg: 14,  mealsSaved: 35, co2PreventedKg: 35,  referenceId: donations[7]._id },
-    { eventType: 'donation_delivered', quantityKg: 48,  mealsSaved: 120,co2PreventedKg: 120, referenceId: donations[5]._id },
-    // Waste processed logs
-    { eventType: 'waste_processed',    quantityKg: 18,  co2PreventedKg: 9,  compostKg: 18, biogasLiters: 6,  referenceId: donations[9]._id },
-    { eventType: 'waste_processed',    quantityKg: 8,   co2PreventedKg: 4,  compostKg: 6,  biogasLiters: 2,  referenceId: donations[8]._id },
-    // Order completed logs (marketplace)
-    { eventType: 'order_completed',    quantityKg: 1.2, co2PreventedKg: 1.2, mealsSaved: 0 },
-    { eventType: 'order_completed',    quantityKg: 0.8, co2PreventedKg: 0.8, mealsSaved: 0 },
+    { eventType: 'donation_delivered', quantityKg: 28,  mealsSaved: 70,  co2PreventedKg: 70,  referenceId: donations[6]._id },
+    { eventType: 'donation_delivered', quantityKg: 16,  mealsSaved: 40,  co2PreventedKg: 40,  referenceId: donations[7]._id },
+    { eventType: 'donation_delivered', quantityKg: 32,  mealsSaved: 80,  co2PreventedKg: 80,  referenceId: donations[5]._id },
+    { eventType: 'waste_processed',    quantityKg: 20,  co2PreventedKg: 10, compostKg: 20, biogasLiters: 8,  referenceId: donations[9]._id },
+    { eventType: 'waste_processed',    quantityKg: 10,  co2PreventedKg: 5,  compostKg: 8,  biogasLiters: 3,  referenceId: donations[8]._id },
+    { eventType: 'order_completed',    quantityKg: 1.5, co2PreventedKg: 1.5, mealsSaved: 0 },
+    { eventType: 'order_completed',    quantityKg: 0.9, co2PreventedKg: 0.9, mealsSaved: 0 },
   ]);
 
   console.log('📊  Impact logs seeded (7 logs)');
@@ -768,25 +769,25 @@ async function seed() {
   // ─────────────────────────────────────────────────────────────────────────
   // SUMMARY
   // ─────────────────────────────────────────────────────────────────────────
-  console.log('\n═══════════════════════════════════════════');
-  console.log('  ✅  PlatePulse seed complete!');
-  console.log('═══════════════════════════════════════════');
-  console.log('\n📋  TEST ACCOUNTS (all passwords: Password@123)');
-  console.log('  admin@platepulse.in             → Admin');
-  console.log('  priya.donor@gmail.com           → Donor (Grand Hyatt Kochi)');
-  console.log('  rahul.donor@gmail.com           → Donor (Wedding Catering)');
-  console.log('  deepa.donor@gmail.com           → Donor (Home Kitchen)');
-  console.log('  anitha.ngo@snehaspandan.org     → NGO (Sneha Spandan)');
-  console.log('  biju.ngo@annpurna.org           → NGO (Annpurna Foundation)');
-  console.log('  akshay.vol@gmail.com            → Volunteer (Gold badge)');
-  console.log('  sneha.vol@gmail.com             → Volunteer (Silver badge)');
-  console.log('  midhun.vol@gmail.com            → Volunteer (unavailable)');
-  console.log('  sajith.retail@freshmart.com     → Retailer (FreshMart)');
-  console.log('  latha.retail@naturals.com       → Retailer (Naturals Organic)');
-  console.log('  vivek.consumer@gmail.com        → Consumer');
-  console.log('  meera.consumer@gmail.com        → Consumer');
-  console.log('  sreejith.waste@greenkochi.gov.in→ Waste Plant');
-  console.log('═══════════════════════════════════════════\n');
+  console.log('\n═══════════════════════════════════════════════════');
+  console.log('  ✅  PlatePulse Hyderabad seed complete!');
+  console.log('═══════════════════════════════════════════════════');
+  console.log('\n📋  TEST ACCOUNTS  (password for all: Password@123)\n');
+  console.log('  admin@platepulse.in                → Admin (HITEC City)');
+  console.log('  priya.donor@gmail.com              → Donor (Taj Falaknuma)');
+  console.log('  rahul.donor@gmail.com              → Donor (Wedding Catering)');
+  console.log('  deepika.donor@gmail.com            → Donor (Home Kitchen)');
+  console.log('  thomas.ngo@rotibank.org            → NGO  (Roti Bank Hyd)');
+  console.log('  sameena.ngo@feedhyd.org            → NGO  (Feed Hyderabad)');
+  console.log('  aakash.vol@gmail.com               → Volunteer (Gold badge)');
+  console.log('  sneha.vol@gmail.com                → Volunteer (Silver badge)');
+  console.log('  naveen.vol@gmail.com               → Volunteer (unavailable)');
+  console.log('  suresh.retail@bigbasket-hyd.com    → Retailer (More Supermarket)');
+  console.log('  lakshmi.retail@organic-hyd.com     → Retailer (Nature\'s Basket)');
+  console.log('  vikram.consumer@gmail.com          → Consumer');
+  console.log('  meghana.consumer@gmail.com         → Consumer');
+  console.log('  ramesh.waste@ghmc.gov.in           → Waste Plant (GHMC Jawaharnagar)');
+  console.log('═══════════════════════════════════════════════════\n');
 
   await mongoose.disconnect();
   process.exit(0);
